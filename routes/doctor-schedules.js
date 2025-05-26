@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const {pool} = require("../db");
 const authenticateToken = require("../middleware/auth");
 
 // Get all doctors with their schedules
 router.get("/doctors", authenticateToken, async (req, res) => {
   try {
-    const { rows } = await db.query(`
+    const { rows } = await pool.query(`
       SELECT 
         d.id AS doctor_id,
         d.name AS doctor_name,
@@ -60,7 +60,7 @@ router.get("/doctor/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `SELECT 
         doctors.id, doctors.name, doctors.phone_no, doctors.email, doctors.specialization, 
         doctor_schedules.id AS schedule_id, doctor_schedules.day_of_week, 
@@ -112,7 +112,7 @@ router.delete("/doctor/:doctor_id", async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `SELECT * FROM doctor_schedules WHERE doctor_id = $1 AND day_of_week = $2 AND start_time = $3`,
       [doctor_id, day_of_week, start_time]
     );
@@ -121,7 +121,7 @@ router.delete("/doctor/:doctor_id", async (req, res) => {
       return res.status(404).json({ message: "Schedule not found" });
     }
 
-    await db.query(
+    await pool.query(
       `DELETE FROM doctor_schedules WHERE doctor_id = $1 AND day_of_week = $2 AND start_time = $3`,
       [doctor_id, day_of_week, start_time]
     );
@@ -143,7 +143,7 @@ router.post("/doctor/:doctor_id", async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const { rows } = await db.query(`SELECT id FROM doctors WHERE id = $1`, [
+    const { rows } = await pool.query(`SELECT id FROM doctors WHERE id = $1`, [
       doctor_id,
     ]);
 
@@ -151,7 +151,7 @@ router.post("/doctor/:doctor_id", async (req, res) => {
       return res.status(404).json({ message: "Doctor not found" });
     }
 
-    await db.query(
+    await pool.query(
       `INSERT INTO doctor_schedules (doctor_id, day_of_week, start_time, end_time) VALUES ($1, $2, $3, $4)`,
       [doctor_id, day_of_week, start_time, end_time]
     );
@@ -175,14 +175,14 @@ router.put(
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      const { rows: doctor } = await db.query(`SELECT id FROM doctors WHERE id = $1`, [
+      const { rows: doctor } = await pool.query(`SELECT id FROM doctors WHERE id = $1`, [
         doctor_id,
       ]);
       if (doctor.length === 0) {
         return res.status(404).json({ message: "Doctor not found" });
       }
 
-      const { rows: schedule } = await db.query(
+      const { rows: schedule } = await pool.query(
         `SELECT id FROM doctor_schedules WHERE id = $1 AND doctor_id = $2`,
         [schedule_id, doctor_id]
       );
@@ -190,7 +190,7 @@ router.put(
         return res.status(404).json({ message: "Schedule not found" });
       }
 
-      await db.query(
+      await pool.query(
         `UPDATE doctor_schedules SET day_of_week = $1, start_time = $2, end_time = $3 WHERE id = $4 AND doctor_id = $5`,
         [day_of_week, start_time, end_time, schedule_id, doctor_id]
       );
@@ -238,7 +238,7 @@ router.patch("/:schedule_id", async (req, res) => {
       ", "
     )} WHERE id = $${paramCount}`;
 
-    const { rowCount } = await db.query(updateQuery, values);
+    const { rowCount } = await pool.query(updateQuery, values);
 
     if (rowCount === 0) {
       return res

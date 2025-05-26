@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
 const csv = require("csv-parser");
-const db = require("../db");
+const {pool} = require("../db");
 const bcrypt = require("bcrypt");
 const authenticateToken = require("../middleware/auth");
 const router = express.Router();
@@ -46,7 +46,7 @@ router.post("/patients", upload.single("csvFile"), authenticateToken, async (req
     
     console.log(`Found ${patientMap.size} unique patients in CSV`);
     
-    const client = await db.connect();
+    const client = await pool.connect();
     const existingPatients = new Set();
     const existingCitizenIds = new Map();
     
@@ -201,7 +201,7 @@ router.post("/lab-data", upload.single("csvFile"), async (req, res) => {
       ];
 
       try {
-        const client = await db.connect();
+        const client = await pool.connect();
         
         // Insert lab data records
         for (const row of records) {

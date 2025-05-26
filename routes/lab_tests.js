@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../db");
+const {pool} = require("../db");
 
 // Get all test names from lab_tests_master
 router.get("/", async (req, res) => {

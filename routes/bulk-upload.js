@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const pool = require("../db"); // Make sure this points to your PostgreSQL pool
+const {pool} = require("../db"); // Make sure this points to your PostgreSQL pool
 const { spawn } = require("child_process");
 const csv = require("csv-parser");
 const fs = require("fs");

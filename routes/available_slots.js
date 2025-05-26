@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const {pool} = require("../db");
 
 router.get("/id=:doctor_id/date=:date", async (req, res) => {
   try {
@@ -18,7 +18,7 @@ router.get("/id=:doctor_id/date=:date", async (req, res) => {
     });
 
     // Get doctor's schedule
-    const { rows: scheduleRows } = await db.query(
+    const { rows: scheduleRows } = await pool.query(
       "SELECT start_time, end_time FROM doctor_schedules WHERE doctor_id = $1 AND day_of_week = $2",
       [doctor_id, dayOfWeek]
     );
@@ -32,7 +32,7 @@ router.get("/id=:doctor_id/date=:date", async (req, res) => {
     const allSlots = generateTimeSlots(date, start_time, end_time, 30);
 
     // Get already booked slots
-    const { rows: bookedRows } = await db.query(
+    const { rows: bookedRows } = await pool.query(
       "SELECT appointment_time FROM appointments WHERE doctor_id = $1 AND appointment_date = $2",
       [doctor_id, date]
     );

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const pool = require('../db'); // Now using pg pool
+const {pool} = require('../db'); // Now using pg pool
 
 // Get a table for lab_data - patients - doctors
 router.get("/", async (req, res) => {

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const {pool} = require("../db");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
 const authenticateToken = require("../middleware/auth");
@@ -11,7 +11,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
 
   let client;
   try {
-    client = await db.connect();
+    client = await pool.connect();
 
     const { rows: patientResults } = await client.query(
       `SELECT id, hn_number, name, citizen_id, phone_no, doctor_id, lab_data_status, account_status 
@@ -68,7 +68,7 @@ router.post(
       }
 
       // Find patient by hn_number
-      const { rows: patientRows } = await db.query(
+      const { rows: patientRows } = await pool.query(
         "SELECT id FROM patients WHERE id = $1",
         [userId]
       );
@@ -80,7 +80,7 @@ router.post(
       const patient_id = patientRows[0].id;
 
       // Insert new appointment
-      const { rows: insertResult } = await db.query(
+      const { rows: insertResult } = await pool.query(
         "INSERT INTO appointments (doctor_id, appointment_date, appointment_time, status, notes, patient_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
         [
           doctor_id,
@@ -107,7 +107,7 @@ router.post(
 router.get("/appointments", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `SELECT a.patient_id,
         COUNT(a.id) AS total_appointments,
         json_agg(
@@ -145,7 +145,7 @@ router.put(
       const userId = req.user.id;
 
       // First, verify this appointment belongs to this patient and is in Rescheduled status
-      const { rows: appointment } = await db.query(
+      const { rows: appointment } = await pool.query(
         `SELECT * FROM appointments WHERE id = $1 AND patient_id = $2 AND status = 'rescheduled'`,
         [req.params.appointmentId, userId]
       );
@@ -157,7 +157,7 @@ router.put(
       }
 
       // Update the appointment status to Scheduled
-      await db.query(
+      await pool.query(
         `UPDATE appointments SET status = 'Scheduled' WHERE id = $1`,
         [req.params.appointmentId]
       );
@@ -181,7 +181,7 @@ router.put(
       const userId = req.user.id;
 
       // First, verify this appointment belongs to this patient
-      const { rows: appointment } = await db.query(
+      const { rows: appointment } = await pool.query(
         `SELECT * FROM appointments WHERE id = $1 AND patient_id = $2`,
         [req.params.appointmentId, userId]
       );
@@ -193,7 +193,7 @@ router.put(
       }
 
       // Update the appointment status to Scheduled
-      await db.query(
+      await pool.query(
         `UPDATE appointments SET status = 'canceled' WHERE id = $1`,
         [req.params.appointmentId]
       );
@@ -213,7 +213,7 @@ router.get("/lab-tests", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `
       SELECT 
         lt.id AS lab_test_id,
@@ -242,7 +242,7 @@ router.get(
     const { lab_test_id } = req.params;
 
     try {
-      const { rows } = await db.query(
+      const { rows } = await pool.query(
         `
       SELECT 
         li.id AS lab_item_id,
@@ -277,7 +277,7 @@ router.get(
     const { lab_test_id } = req.params;
 
     try {
-      const { rows } = await db.query(
+      const { rows } = await pool.query(
         `
       SELECT 
         r.id AS recommendation_id,
@@ -308,7 +308,7 @@ router.get(
 // Get all patients
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    const { rows } = await db.query("SELECT * FROM patients");
+    const { rows } = await pool.query("SELECT * FROM patients");
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -318,7 +318,7 @@ router.get("/", authenticateToken, async (req, res) => {
 // Delete a patient
 router.delete("/:id", authenticateToken, async (req, res) => {
   try {
-    await db.query("DELETE FROM patients WHERE id = $1", [req.params.id]);
+    await pool.query("DELETE FROM patients WHERE id = $1", [req.params.id]);
     res.json({ message: "Patient deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -350,7 +350,7 @@ router.post("/", authenticateToken, async (req, res) => {
 
   try {
     // Get a connection from the pool
-    const client = await db.connect();
+    const client = await pool.connect();
 
     try {
       // Start transaction
@@ -430,9 +430,9 @@ router.post("/", authenticateToken, async (req, res) => {
       const currentTimestamp = new Date();
       await client.query(
         `INSERT INTO lab_tests 
-         (patient_id, lab_test_master_id, status, lab_test_date)
-         VALUES ($1, $2, $3, $4)`,
-        [patientId, lab_test_master_id, "pending", currentTimestamp]
+         (patient_id, lab_test_master_id, status, lab_test_date, hn_number)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [patientId, lab_test_master_id, "pending", currentTimestamp, hn_number]
       );
 
       // Commit transaction
@@ -460,7 +460,7 @@ router.get("/:hn_number", authenticateToken, async (req, res) => {
   const hn_number = req.params.hn_number;
 
   try {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     const { rows } = await client.query(
       `
@@ -623,7 +623,7 @@ router.put("/:hn_number", authenticateToken, async (req, res) => {
   console.log("Update payload:", req.body);
 
   try {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     // Update patients table
     await client.query(
@@ -674,7 +674,7 @@ router.put("/:hn_number", authenticateToken, async (req, res) => {
 // Get a patient by ID
 router.get("/:id", async (req, res) => {
   try {
-    const { rows } = await db.query("SELECT * FROM patients WHERE id = $1", [
+    const { rows } = await pool.query("SELECT * FROM patients WHERE id = $1", [
       req.params.id,
     ]);
     if (rows.length === 0)
@@ -688,7 +688,7 @@ router.get("/:id", async (req, res) => {
 // Get a patient by ID and inner join lab-data --- patients --- doctors
 router.get("/:id/details", async (req, res) => {
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `SELECT
         patients.id AS patient_id,
         patients.name AS patient_name,
@@ -728,7 +728,7 @@ router.patch("/:appointmentId/reschedule", async (req, res) => {
       req.body;
 
     // Step 1: Verify that the appointment belongs to the patient and matches doctor_id
-    const { rows: existingAppointments } = await db.query(
+    const { rows: existingAppointments } = await pool.query(
       `SELECT * FROM appointments WHERE id = $1 AND hn_number = $2 AND doctor_id = $3`,
       [appointmentId, hn_number, doctor_id]
     );
@@ -756,7 +756,7 @@ router.patch("/:appointmentId/reschedule", async (req, res) => {
     }
 
     // Step 3: Update the appointment with new values and set status to Pending
-    await db.query(
+    await pool.query(
       `UPDATE appointments 
        SET appointment_date = $1, appointment_time = $2, status = 'pending' 
        WHERE id = $3`,
@@ -779,7 +779,7 @@ router.patch("/:appointmentId/reschedule", async (req, res) => {
 // Get a patient with lab test and lab test items
 router.get("/id=:id/lab-results", async (req, res) => {
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `SELECT 
         lt.hn_number,
         lt.id AS lab_test_id,
@@ -842,7 +842,7 @@ router.put("/:id", async (req, res) => {
     req.body;
 
   try {
-    await db.query(
+    await pool.query(
       `UPDATE patients SET name = $1, citizen_id = $2, phone_no = $3, email = $4, password = $5, status = $6, doctor_id = $7 WHERE id = $8`,
       [
         name,
@@ -866,7 +866,7 @@ router.get("/details/:hnNumber", async (req, res) => {
   const { hnNumber } = req.params;
 
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `
       SELECT 
         p.hn_number,

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const {pool} = require("../db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const authenticateToken = require("../middleware/auth");
@@ -13,7 +13,7 @@ router.post("/patients", async (req, res) => {
   const { phone_no, password } = req.body;
 
   try {
-    const { rows: results } = await db.query(
+    const { rows: results } = await pool.query(
       "SELECT * FROM patients WHERE phone_no = $1",
       [phone_no]
     );
@@ -62,7 +62,7 @@ router.post("/patients/change-password", authenticateToken, async (req, res) => 
   try {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    const { rowCount } = await db.query(
+    const { rowCount } = await pool.query(
       "UPDATE patients SET password = $1, account_status = 1 WHERE id = $2",
       [hashedPassword, userId]
     );
@@ -84,7 +84,7 @@ router.post("/admins", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const { rows: results } = await db.query("SELECT * FROM admin WHERE email = $1", [email]);
+    const { rows: results } = await pool.query("SELECT * FROM admin WHERE email = $1", [email]);
 
     if (results.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -124,7 +124,7 @@ router.post("/doctors", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const { rows: results } = await db.query("SELECT * FROM doctors WHERE email = $1", [email]);
+    const { rows: results } = await pool.query("SELECT * FROM doctors WHERE email = $1", [email]);
 
     if (results.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });

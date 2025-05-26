@@ -1,6 +1,6 @@
 const express = require('express');
 const upload = require('../middleware/upload_image');
-const db = require('../db');
+const {pool} = require('../db');
 const path = require('path');
 const router = express.Router();
 const fs = require('fs');
@@ -9,7 +9,7 @@ router.get('/:id', async (req, res) => {
   const doctorId = req.params.id;
 
   try {
-    const { rows } = await db.query('SELECT * FROM doctors WHERE id = $1', [doctorId]);
+    const { rows } = await pool.query('SELECT * FROM doctors WHERE id = $1', [doctorId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Doctor not found' });
@@ -40,7 +40,7 @@ router.patch('/upload/:id', upload.single('image'), async (req, res) => {
   const imagePath = req.file.path;
 
   try {
-    const { rowCount } = await db.query(
+    const { rowCount } = await pool.query(
       'UPDATE doctors SET image = $1, updated_at = NOW() WHERE id = $2',
       [imagePath, doctorId]
     );
@@ -65,7 +65,7 @@ router.delete('/delete/:id', async (req, res) => {
 
   try {
     // Get current image path from DB
-    const { rows } = await db.query('SELECT image FROM doctors WHERE id = $1', [doctorId]);
+    const { rows } = await pool.query('SELECT image FROM doctors WHERE id = $1', [doctorId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Doctor not found' });
@@ -84,7 +84,7 @@ router.delete('/delete/:id', async (req, res) => {
     }
 
     // Update DB: remove image reference
-    await db.query(
+    await pool.query(
       'UPDATE doctors SET image = NULL, updated_at = NOW() WHERE id = $1',
       [doctorId]
     );

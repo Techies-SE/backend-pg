@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db"); // Now using pg pool
+const {pool} = require("../db"); // Now using pg pool
 const bcrypt = require("bcrypt");
 const authenticateToken = require("../middleware/auth");
 
@@ -14,7 +14,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
   let client;
 
   try {
-    client = await db.connect();
+    client = await pool.connect();
 
     // Get doctor information (excluding password)
     const doctorResults = await client.query(
@@ -71,7 +71,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
 router.get("/patients-lab-tests", authenticateToken, async (req, res) => {
   const doctorId = req.user.id;
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `
         SELECT 
           p.id AS patient_id,        
@@ -101,7 +101,7 @@ router.get("/pending-lab-results-count", authenticateToken, async (req, res) => 
   const doctorId = req.user.id;
 
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `
       SELECT 
         COUNT(DISTINCT lt.id) AS pending_lab_results_count
@@ -129,7 +129,7 @@ router.get("/recent-lab-tests", authenticateToken, async (req, res) => {
   const doctorId = req.user.id;
 
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `
       SELECT 
         p.name AS patient_name,
@@ -166,7 +166,7 @@ router.get("/:hn_number/lab-test/:lab_test_id", authenticateToken, async (req, r
   const { hn_number, lab_test_id } = req.params;
 
   try {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     const { rows } = await client.query(
       `
@@ -284,7 +284,7 @@ router.get("/patient-count", authenticateToken, async (req, res) => {
   const doctorId = req.user.id;
 
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `SELECT COUNT(*) AS patient_count FROM patients WHERE doctor_id = $1`,
       [doctorId]
     );
@@ -303,7 +303,7 @@ router.get("/appointments-count", authenticateToken, async (req, res) => {
   const doctorId = req.user.id;
 
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `SELECT COUNT(*) AS scheduled_appointment_count 
        FROM appointments 
        WHERE doctor_id = $1 AND status = 'scheduled'`,
@@ -324,7 +324,7 @@ router.get("/pending-lab-results", authenticateToken, async (req, res) => {
   const doctorId = req.user.id;
 
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `
       SELECT 
           lt.id AS lab_test_id,
@@ -385,7 +385,7 @@ router.post("/", authenticateToken, async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(phone_no, 10);
 
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `INSERT INTO doctors (name, phone_no, email, password, specialization, status, department_id) 
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
@@ -400,7 +400,7 @@ router.post("/", authenticateToken, async (req, res) => {
 
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    const { rows } = await db.query("SELECT * FROM doctors");
+    const { rows } = await pool.query("SELECT * FROM doctors");
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -411,7 +411,7 @@ router.get("/:id", authenticateToken, async (req, res) => {
   const doctorId = req.params.id;
 
   try {
-    const { rows } = await db.query("SELECT * FROM doctors WHERE id = $1", [doctorId]);
+    const { rows } = await pool.query("SELECT * FROM doctors WHERE id = $1", [doctorId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: "Doctor not found" });
@@ -432,7 +432,7 @@ router.get("/:id", authenticateToken, async (req, res) => {
 
 router.delete("/:id", authenticateToken, async (req, res) => {
   try {
-    await db.query("DELETE FROM doctors WHERE id = $1", [req.params.id]);
+    await pool.query("DELETE FROM doctors WHERE id = $1", [req.params.id]);
     res.json({ message: "Doctor deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -468,7 +468,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
   updates.push("updated_at = NOW()");
 
   try {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     const query = `UPDATE doctors SET ${updates.join(", ")} WHERE id = $${values.length + 1}`;
     await client.query(query, [...values, doctorId]);
@@ -483,7 +483,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 
 router.get("/:id/details", async (req, res) => {
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       `SELECT
           doctors.id AS doctor_id,
           doctors.name AS doctor_name,

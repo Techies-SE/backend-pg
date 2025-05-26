@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../db"); // Make sure this is your PostgreSQL pool instance
+const {pool} = require("../db"); // Make sure this is your PostgreSQL pool instance
 const bcrypt = require("bcrypt");
 const authenticateToken = require("../middleware/auth");
 
@@ -59,7 +59,8 @@ router.get("/", authenticateToken, async (req, res) => {
 });
 
 // Create an admin
-router.post("/", authenticateToken, async (req, res) => {
+router.post("/", authenticateToken,async (req, res) => {
+  console.log(req.body); 
   const { name, phone_no, email, status } = req.body;
 
   try {

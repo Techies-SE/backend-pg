@@ -1,11 +1,11 @@
-const db = require("../db.js");
+const {pool} = require("../db.js");
 const { generateRecommendation } = require("./geminiService.js");
 const { createRecommendationPrompt } = require("./recommendationPrompt.js");
 
 module.exports.generateAndSaveRecommendation = async function (lab_test_id) {
   try {
     // Step 1: Get lab test data + patient info including doctor_id
-    const { rows: labData } = await db.query(
+    const { rows: labData } = await pool.query(
       `
       SELECT 
         p.name AS patient_name,
@@ -49,7 +49,7 @@ module.exports.generateAndSaveRecommendation = async function (lab_test_id) {
     const aiRecommendation = await generateRecommendation(prompt);
 
     // Step 3: Save to recommendations table with doctor_id
-    await db.query(
+    await pool.query(
       `
       INSERT INTO recommendations 
         (generated_recommendation, status, lab_test_id, doctor_id, updated_at)

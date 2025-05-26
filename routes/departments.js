@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const db = require('../db'); 
+const {pool} = require('../db'); 
 const fs = require('fs');
 const authenticateToken = require('../middleware/auth');
 
@@ -22,7 +22,7 @@ const upload = multer({ storage });
 // Get all departments
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { rows } = await db.query('SELECT * FROM departments');
+    const { rows } = await pool.query('SELECT * FROM departments');
     res.json(rows);
   } catch (err) {
     console.error('Error fetching departments:', err);
@@ -44,7 +44,7 @@ router.get('/id=:id', async (req, res) => {
   `;
 
   try {
-    const { rows } = await db.query(query, [departmentId]);
+    const { rows } = await pool.query(query, [departmentId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Department not found' });
@@ -84,7 +84,7 @@ router.patch('/image/upload/:id', upload.single('image'), authenticateToken, asy
   const imageUrl = `http://localhost:3000/${imagePath}`;
 
   try {
-    const { rowCount } = await db.query(
+    const { rowCount } = await pool.query(
       'UPDATE departments SET image = $1 WHERE id = $2',
       [imagePath, departmentId]
     );
@@ -110,7 +110,7 @@ router.delete('/image/delete/:id', authenticateToken, async (req, res) => {
 
   try {
     // Get current image path from DB
-    const { rows } = await db.query('SELECT image FROM departments WHERE id = $1', [departmentId]);
+    const { rows } = await pool.query('SELECT image FROM departments WHERE id = $1', [departmentId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Department not found' });
@@ -129,7 +129,7 @@ router.delete('/image/delete/:id', authenticateToken, async (req, res) => {
     }
 
     // Update DB: remove image reference
-    await db.query(
+    await pool.query(
       'UPDATE departments SET image = NULL WHERE id = $1',
       [departmentId]
     );
@@ -151,7 +151,7 @@ router.post('/', upload.single('image'), authenticateToken, async (req, res) => 
   }
 
   try {
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       'INSERT INTO departments (name, description, image) VALUES ($1, $2, $3) RETURNING *',
       [name, description || null, imagePath]
     );
@@ -174,7 +174,7 @@ router.post('/', upload.single('image'), authenticateToken, async (req, res) => 
 // Get department counts with doctors
 router.get('/doctor-counts', authenticateToken, async (req, res) => {
   try {
-    const { rows } = await db.query(`
+    const { rows } = await pool.query(`
       SELECT 
         d.id AS department_id,
         d.name AS department_name,
@@ -211,7 +211,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
   `;
 
   try {
-    const { rows } = await db.query(query, [departmentId]);
+    const { rows } = await pool.query(query, [departmentId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Department not found' });
@@ -248,7 +248,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
   try {
     // Step 1: Get current image path
-    const { rows } = await db.query(
+    const { rows } = await pool.query(
       'SELECT image FROM departments WHERE id = $1',
       [departmentId]
     );
@@ -270,7 +270,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     // Step 3: Delete department from DB
-    await db.query('DELETE FROM departments WHERE id = $1', [departmentId]);
+    await pool.query('DELETE FROM departments WHERE id = $1', [departmentId]);
 
     res.json({ message: 'Department deleted successfully' });
   } catch (err) {

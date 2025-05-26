@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../db"); // promise-based connection pool (now for PostgreSQL)
+const {pool} = require("../db"); // promise-based connection pool (now for PostgreSQL)
 const authenticateToken = require("../middleware/auth");
 
 // GET all doctors with their department
