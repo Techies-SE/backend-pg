@@ -61,7 +61,7 @@ router.post(
   authenticateToken,
   async (req, res) => {
     const userId = req.user.id;
-    const newPassword = req.body;
+    const newPassword = req.body.password;
 
     if (!userId || !newPassword) {
       return res
