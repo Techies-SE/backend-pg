@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const {pool} = require("../db");
+const { pool } = require("../db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const authenticateToken = require("../middleware/auth");
@@ -19,14 +19,18 @@ router.post("/patients", async (req, res) => {
     );
 
     if (results.length === 0) {
-      return res.status(401).json({ error: "Invalid phone number or password" });
+      return res
+        .status(401)
+        .json({ error: "Invalid phone number or password" });
     }
 
     const patient = results[0];
     const isMatch = await bcrypt.compare(password, patient.password);
 
     if (!isMatch) {
-      return res.status(401).json({ error: "Invalid phone number or password" });
+      return res
+        .status(401)
+        .json({ error: "Invalid phone number or password" });
     }
 
     const token = jwt.sign(
@@ -52,31 +56,40 @@ router.post("/patients", async (req, res) => {
 });
 
 // Patients Change Password for the first time login
-router.post("/patients/change-password", authenticateToken, async (req, res) => {
-  const { userId, newPassword } = req.body;
+router.post(
+  "/patients/change-password",
+  authenticateToken,
+  async (req, res) => {
+    const userId = req.user.id;
+    const newPassword = req.body;
 
-  if (!userId || !newPassword) {
-    return res.status(400).json({ error: "User ID and password are required" });
-  }
-
-  try {
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    const { rowCount } = await pool.query(
-      "UPDATE patients SET password = $1, account_status = 1 WHERE id = $2",
-      [hashedPassword, userId]
-    );
-
-    if (rowCount === 0) {
-      return res.status(404).json({ error: "User not found" });
+    if (!userId || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: "User ID and password are required" });
     }
 
-    res.status(200).json({ success: true, message: "Password changed successfully" });
-  } catch (err) {
-    console.error("Password change error:", err);
-    res.status(500).json({ error: "Database error" });
+    try {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      const { rowCount } = await pool.query(
+        "UPDATE patients SET password = $1, account_status = 1 WHERE id = $2",
+        [hashedPassword, userId]
+      );
+
+      if (rowCount === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res
+        .status(200)
+        .json({ success: true, message: "Password changed successfully" });
+    } catch (err) {
+      console.error("Password change error:", err);
+      res.status(500).json({ error: "Database error" });
+    }
   }
-});
+);
 
 // Admin Login
 router.post("/admins", async (req, res) => {
@@ -84,7 +97,10 @@ router.post("/admins", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const { rows: results } = await pool.query("SELECT * FROM admin WHERE email = $1", [email]);
+    const { rows: results } = await pool.query(
+      "SELECT * FROM admin WHERE email = $1",
+      [email]
+    );
 
     if (results.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -124,7 +140,10 @@ router.post("/doctors", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const { rows: results } = await pool.query("SELECT * FROM doctors WHERE email = $1", [email]);
+    const { rows: results } = await pool.query(
+      "SELECT * FROM doctors WHERE email = $1",
+      [email]
+    );
 
     if (results.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
