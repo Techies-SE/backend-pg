@@ -73,7 +73,7 @@ router.post(
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       const { rowCount } = await pool.query(
-        "UPDATE patients SET password = $1, account_status = 1 WHERE id = $2",
+        "UPDATE patients SET password = $1, account_status = true WHERE id = $2",
         [hashedPassword, userId]
       );
 
