@@ -53,7 +53,8 @@ router.post("/patients", async (req, res) => {
 
 // Patients Change Password for the first time login
 router.post("/patients/change-password", authenticateToken, async (req, res) => {
-  const { userId, newPassword } = req.body;
+  const userId = req.user.id;
+  const newPassword = req.body.password;
 
   if (!userId || !newPassword) {
     return res.status(400).json({ error: "User ID and password are required" });
@@ -63,7 +64,7 @@ router.post("/patients/change-password", authenticateToken, async (req, res) => 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     const { rowCount } = await pool.query(
-      "UPDATE patients SET password = $1, account_status = 1 WHERE id = $2",
+      "UPDATE patients SET password = $1, account_status = true WHERE id = $2",
       [hashedPassword, userId]
     );
 
