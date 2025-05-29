@@ -630,7 +630,6 @@ router.get("/:hn_number", authenticateToken, async (req, res) => {
   
           lt.id AS lab_test_id,
           lt.lab_test_date,
-          lt.status AS lab_test_status,
           ltm.test_name,
   
           li.id AS lab_item_id,
