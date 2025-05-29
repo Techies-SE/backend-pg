@@ -17,8 +17,27 @@ router.get("/recent-lab-tests", authenticateToken, async (req, res) => {
     console.log("3. Doctor ID:", doctorId);
     
     const { rows } = await pool.query(
-      `SELECT 1 as test`, // Simple test query first
-      []
+      `SELECT 
+        p.name AS patient_name,
+        p.id AS patient_id,
+        p.hn_number,
+        ltm.test_name,
+        lt.lab_test_date,
+        lt.id AS lab_test_id
+      FROM 
+        lab_tests lt
+      JOIN 
+        lab_tests_master ltm ON lt.lab_test_master_id = ltm.id
+      JOIN 
+        patients p ON lt.patient_id = p.id
+      JOIN 
+        patient_doctor pd ON pd.patient_id = p.id
+      WHERE 
+        pd.doctor_id = $1
+      ORDER BY 
+        lt.lab_test_date DESC
+      LIMIT 3`, // Simple test query first
+      [doctorId]
     );
     
     console.log("4. Query successful:", rows);
