@@ -71,6 +71,43 @@ router.get("/profile", authenticateToken, async (req, res) => {
   }
 });
 
+router.get("/recent-lab-tests", authenticateToken, async (req, res) => {
+  const doctorId = req.user.id;
+
+  try {
+    const { rows } = await pool.query(
+      `
+      SELECT 
+        p.name AS patient_name,
+        p.id AS patient_id,
+        p.hn_number,
+        ltm.test_name,
+        lt.lab_test_date,
+        lt.id AS lab_test_id
+      FROM 
+        lab_tests lt
+      JOIN 
+        lab_tests_master ltm ON lt.lab_test_master_id = ltm.id
+      JOIN 
+        patients p ON lt.patient_id = p.id
+      JOIN 
+        patient_doctor pd ON pd.patient_id = p.id
+      WHERE 
+        pd.doctor_id = $1
+      ORDER BY 
+        lt.lab_test_date DESC
+      LIMIT 3
+      `,
+      [doctorId]
+    );
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error("Error fetching recent lab tests:", error);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+});
+
 router.get("/patients-lab-tests", authenticateToken, async (req, res) => {
   const doctorId = req.user.id;
   try {
@@ -133,42 +170,7 @@ router.get(
   }
 );
 
-router.get("/recent-lab-tests", authenticateToken, async (req, res) => {
-  const doctorId = req.user.id;
 
-  try {
-    const { rows } = await pool.query(
-      `
-      SELECT 
-        p.name AS patient_name,
-        p.id AS patient_id,
-        p.hn_number,
-        ltm.test_name,
-        lt.lab_test_date,
-        lt.id AS lab_test_id
-      FROM 
-        lab_tests lt
-      JOIN 
-        lab_tests_master ltm ON lt.lab_test_master_id = ltm.id
-      JOIN 
-        patients p ON lt.patient_id = p.id
-      JOIN 
-        patient_doctor pd ON pd.patient_id = p.id
-      WHERE 
-        pd.doctor_id = $1
-      ORDER BY 
-        lt.lab_test_date DESC
-      LIMIT 3
-      `,
-      [doctorId]
-    );
-
-    res.json({ success: true, data: rows });
-  } catch (error) {
-    console.error("Error fetching recent lab tests:", error);
-    res.status(500).json({ success: false, error: "Internal Server Error" });
-  }
-});
 
 router.get(
   "/:hn_number/lab-test/:lab_test_id",
