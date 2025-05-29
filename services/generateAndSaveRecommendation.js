@@ -1,15 +1,14 @@
-const {pool} = require("../db.js");
+const { pool } = require("../db.js");
 const { generateRecommendation } = require("./geminiService.js");
 const { createRecommendationPrompt } = require("./recommendationPrompt.js");
 
 module.exports.generateAndSaveRecommendation = async function (lab_test_id) {
   try {
-    // Step 1: Get lab test data + patient info including doctor_id
+    // Step 1: Get lab test data + patient info
     const { rows: labData } = await pool.query(
       `
       SELECT 
         p.name AS patient_name,
-        p.doctor_id,
         li.lab_item_name,
         lr.lab_item_value,
         lr.lab_item_status,
@@ -36,14 +35,18 @@ module.exports.generateAndSaveRecommendation = async function (lab_test_id) {
       ) {
         return {
           ...item,
-          lab_item_value: String(item.lab_item_value) === "0" ? "Male" : "Female",
+          lab_item_value:
+            String(item.lab_item_value) === "0" ? "Male" : "Female",
           lab_item_status: null, // explicitly null since gender has no high/low
         };
       }
       return item;
     });
 
-    const prompt = await createRecommendationPrompt(patientName, transformedLabData);
+    const prompt = await createRecommendationPrompt(
+      patientName,
+      transformedLabData
+    );
 
     // Step 2: Generate recommendation
     const aiRecommendation = await generateRecommendation(prompt);
