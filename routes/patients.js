@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const {pool} = require("../db");
+const { pool } = require("../db");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
 const authenticateToken = require("../middleware/auth");
@@ -264,7 +264,9 @@ router.get(
       res.status(200).json({ success: true, data: rows });
     } catch (error) {
       console.error("Error fetching lab items:", error);
-      res.status(500).json({ success: false, message: "Internal server error" });
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
     }
   }
 );
@@ -300,7 +302,9 @@ router.get(
       res.status(200).json({ success: true, data: rows });
     } catch (error) {
       console.error("Error fetching recommendations:", error);
-      res.status(500).json({ success: false, message: "Internal server error" });
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
     }
   }
 );
@@ -326,15 +330,137 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 });
 
 // Create a patient
+// router.post("/", authenticateToken, async (req, res) => {
+//   const {
+//     hn_number,
+//     name,
+//     citizen_id,
+//     phone_no,
+//     doctor_id,
+//     lab_test_master_id,
+//   } = req.body;
+
+//   // Validate required fields
+//   if (
+//     !hn_number ||
+//     !name ||
+//     !citizen_id ||
+//     !phone_no ||
+//     !doctor_id ||
+//     !lab_test_master_id
+//   ) {
+//     return res.status(400).json({ error: "All fields are required." });
+//   }
+
+//   try {
+//     // Get a connection from the pool
+//     const client = await pool.connect();
+
+//     try {
+//       // Start transaction
+//       await client.query('BEGIN');
+
+//       let patientId;
+
+//       // Check if patient already exists
+//       const { rows: existingPatients } = await client.query(
+//         "SELECT * FROM patients WHERE hn_number = $1 OR citizen_id = $2",
+//         [hn_number, citizen_id]
+//       );
+
+//       // Check for patient existence and potential conflicts
+//       if (existingPatients.length > 0) {
+//         const existingPatient = existingPatients[0];
+
+//         // Check for citizen_id conflict with different HN number
+//         if (
+//           existingPatient.hn_number !== hn_number &&
+//           existingPatient.citizen_id === citizen_id
+//         ) {
+//           return res.status(409).json({
+//             error: `Citizen ID ${citizen_id} already exists with different HN number ${existingPatient.hn_number}`,
+//           });
+//         }
+
+//         // Check for HN number conflict with different citizen_id
+//         if (
+//           existingPatient.hn_number === hn_number &&
+//           existingPatient.citizen_id !== citizen_id
+//         ) {
+//           return res.status(409).json({
+//             error: `HN number ${hn_number} already exists with different Citizen ID`,
+//           });
+//         }
+
+//         // Patient exists, use their ID
+//         patientId = existingPatient.id;
+//         // If patient exists but all details match, we can proceed with just the lab test
+//         console.log(
+//           `Patient with HN ${hn_number} already exists, adding lab test only`
+//         );
+//       } else {
+//         // Patient doesn't exist, create new patient
+//         const hashedPassword = await bcrypt.hash(citizen_id, saltRounds);
+
+//         // Insert into patients table
+//         const { rows: patientInsertResult } = await client.query(
+//           `INSERT INTO patients
+//            (hn_number, name, citizen_id, phone_no, password, lab_data_status, account_status, doctor_id)
+//            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+//           [
+//             hn_number,
+//             name,
+//             citizen_id,
+//             phone_no,
+//             hashedPassword,
+//             false,
+//             false,
+//             doctor_id,
+//           ]
+//         );
+
+//         patientId = patientInsertResult[0].id;
+
+//         // INSERT into patient_data table
+//         await client.query(
+//           `INSERT INTO patient_data (hn_number) VALUES ($1)`,
+//           [hn_number]
+//         );
+
+//         console.log(`Created new patient with HN ${hn_number}`);
+//       }
+
+//       // Insert into lab_tests table
+//       const currentTimestamp = new Date();
+//       await client.query(
+//         `INSERT INTO lab_tests
+//          (patient_id, lab_test_master_id, status, lab_test_date, hn_number)
+//          VALUES ($1, $2, $3, $4, $5)`,
+//         [patientId, lab_test_master_id, "pending", currentTimestamp, hn_number]
+//       );
+
+//       // Commit transaction
+//       await client.query('COMMIT');
+
+//       res.status(201).json({
+//         message: "Lab test created successfully.",
+//       });
+//     } catch (error) {
+//       // Rollback in case of error
+//       await client.query('ROLLBACK');
+//       throw error;
+//     } finally {
+//       // Always release the connection
+//       client.release();
+//     }
+//   } catch (error) {
+//     console.error("Error processing patient request:", error);
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 router.post("/", authenticateToken, async (req, res) => {
-  const {
-    hn_number,
-    name,
-    citizen_id,
-    phone_no,
-    doctor_id,
-    lab_test_master_id,
-  } = req.body;
+  const { hn_number, name, citizen_id, phone_no, date_of_birth, gender } =
+    req.body;
 
   // Validate required fields
   if (
@@ -342,10 +468,23 @@ router.post("/", authenticateToken, async (req, res) => {
     !name ||
     !citizen_id ||
     !phone_no ||
-    !doctor_id ||
-    !lab_test_master_id
+    !date_of_birth ||
+    !gender
   ) {
     return res.status(400).json({ error: "All fields are required." });
+  }
+  // Validate gender
+  if (!["male", "female"].includes(gender.toLowerCase())) {
+    return res
+      .status(400)
+      .json({ error: "Gender must be 'male' or 'female'." });
+  }
+  // Validate date format (basic check)
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(date_of_birth)) {
+    return res
+      .status(400)
+      .json({ error: "Date of birth must be in YYYY-MM-DD format." });
   }
 
   try {
@@ -354,9 +493,10 @@ router.post("/", authenticateToken, async (req, res) => {
 
     try {
       // Start transaction
-      await client.query('BEGIN');
+      await client.query("BEGIN");
 
       let patientId;
+      let isNewPatient = false;
 
       // Check if patient already exists
       const { rows: existingPatients } = await client.query(
@@ -387,21 +527,41 @@ router.post("/", authenticateToken, async (req, res) => {
             error: `HN number ${hn_number} already exists with different Citizen ID`,
           });
         }
-
-        // Patient exists, use their ID
+        // Patient exists with matching HN and citizen_id - update their info
         patientId = existingPatient.id;
-        // If patient exists but all details match, we can proceed with just the lab test
-        console.log(
-          `Patient with HN ${hn_number} already exists, adding lab test only`
+        // Update patient basic info
+        await client.query(
+          `UPDATE patients SET name = $1, phone_no = $2 WHERE id = $3`,
+          [name, phone_no, patientId]
         );
+        // Update or insert patient_data
+        const { rows: existingData } = await client.query(
+          "SELECT * FROM patient_data WHERE hn_number = $1",
+          [hn_number]
+        );
+
+        if (existingData.length > 0) {
+          await client.query(
+            `UPDATE patient_data SET date_of_birth = $1, gender = $2 WHERE hn_number = $3`,
+            [date_of_birth, gender.toLowerCase(), hn_number]
+          );
+        } else {
+          await client.query(
+            `INSERT INTO patient_data (hn_number, date_of_birth, gender) VALUES ($1, $2, $3)`,
+            [hn_number, date_of_birth, gender.toLowerCase()]
+          );
+        }
+
+        console.log(`Updated existing patient with HN ${hn_number}`);
       } else {
+        isNewPatient = true;
         // Patient doesn't exist, create new patient
         const hashedPassword = await bcrypt.hash(citizen_id, saltRounds);
-
+        const registered_at = new Date();
         // Insert into patients table
         const { rows: patientInsertResult } = await client.query(
           `INSERT INTO patients 
-           (hn_number, name, citizen_id, phone_no, password, lab_data_status, account_status, doctor_id)
+           (hn_number, name, citizen_id, phone_no, password, lab_data_status, account_status, registered_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
           [
             hn_number,
@@ -411,7 +571,7 @@ router.post("/", authenticateToken, async (req, res) => {
             hashedPassword,
             false,
             false,
-            doctor_id,
+            registered_at,
           ]
         );
 
@@ -419,31 +579,25 @@ router.post("/", authenticateToken, async (req, res) => {
 
         // INSERT into patient_data table
         await client.query(
-          `INSERT INTO patient_data (hn_number) VALUES ($1)`,
-          [hn_number]
+          `INSERT INTO patient_data (hn_number, date_of_birth, gender) VALUES ($1, $2, $3)`,
+          [hn_number, date_of_birth, gender]
         );
 
         console.log(`Created new patient with HN ${hn_number}`);
       }
 
-      // Insert into lab_tests table
-      const currentTimestamp = new Date();
-      await client.query(
-        `INSERT INTO lab_tests 
-         (patient_id, lab_test_master_id, status, lab_test_date, hn_number)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [patientId, lab_test_master_id, "pending", currentTimestamp, hn_number]
-      );
-
       // Commit transaction
-      await client.query('COMMIT');
+      await client.query("COMMIT");
 
-      res.status(201).json({
-        message: "Lab test created successfully.",
+      res.status(isNewPatient ? 201 : 200).json({
+        message: isNewPatient
+          ? "Patient created successfully."
+          : "Patient updated successfully.",
+        patientId: patientId,
       });
     } catch (error) {
       // Rollback in case of error
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
       throw error;
     } finally {
       // Always release the connection
