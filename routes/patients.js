@@ -271,32 +271,24 @@ router.get(
   }
 );
 
-// Recommendation for each Patient Lab Test (Protected Route)
+// Recommendation (Protected Route)
 router.get(
-  "/lab-tests/:lab_test_id/recommendations",
+  "/recommendations",
   authenticateToken,
   async (req, res) => {
-    const { lab_test_id } = req.params;
+    const userId = req.user.id;
 
     try {
       const { rows } = await pool.query(
         `
       SELECT 
         r.id AS recommendation_id,
-        r.status AS recommendation_status,
-        r.updated_at,
+        r.lab_test_date,
         r.generated_recommendation,
         d.name AS doctor_name,
-        d.specialization,
-        lt.lab_test_date,
-        ltm.test_name
       FROM recommendations r
-      JOIN lab_tests lt ON r.lab_test_id = lt.id
-      JOIN lab_tests_master ltm ON lt.lab_test_master_id = ltm.id
       JOIN doctors d ON r.doctor_id = d.id
-      WHERE r.lab_test_id = $1
-    `,
-        [lab_test_id]
+    `
       );
 
       res.status(200).json({ success: true, data: rows });
