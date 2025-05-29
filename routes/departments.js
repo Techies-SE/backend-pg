@@ -32,23 +32,88 @@ const upload = multer({ storage });
 //   }
 // });
 
+// router.get("/", authenticateToken, async (req, res) => {
+//   try {
+//     // Get all departments
+//     const departmentsQuery = await pool.query("SELECT * FROM departments");
+//     const departments = departmentsQuery.rows;
+
+//     // // Get all doctors grouped by department
+//     const doctorsQuery = await pool.query(`
+//       SELECT d.*, json_agg(doctors.*) as doctors
+//       FROM departments d
+//       LEFT JOIN doctors ON doctors.department_id = d.id
+//       GROUP BY d.id
+//     `);
+
+//     res.json(doctorsQuery.rows);
+//   } catch (err) {
+//     console.error("Error fetching departments with doctors:", err);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
 router.get("/", authenticateToken, async (req, res) => {
   try {
     // Get all departments
-    const departmentsQuery = await pool.query("SELECT * FROM departments");
+    const departmentsQuery = await pool.query(
+      "SELECT * FROM departments ORDER BY id"
+    );
     const departments = departmentsQuery.rows;
 
-    // // Get all doctors grouped by department
+    // Get all doctors with their schedules
     const doctorsQuery = await pool.query(`
-      SELECT d.*, json_agg(doctors.*) as doctors
-      FROM departments d
-      LEFT JOIN doctors ON doctors.department_id = d.id
-      GROUP BY d.id
+      SELECT 
+        d.*,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'schedule_id', ds.id,
+              'day_of_week', ds.day_of_week,
+              'start_time', ds.start_time,
+              'end_time', ds.end_time
+            )
+          ) FILTER (WHERE ds.id IS NOT NULL),
+          '[]'::json
+        ) AS schedules
+      FROM 
+        doctors d
+      LEFT JOIN 
+        doctor_schedules ds ON ds.doctor_id = d.id
+      GROUP BY 
+        d.id
     `);
+    const doctors = doctorsQuery.rows;
 
-    res.json(doctorsQuery.rows);
+    // Combine the data
+    const result = departments.map((department) => {
+      const departmentDoctors = doctors
+        .filter((doctor) => doctor.department_id === department.id)
+        .map((doctor) => ({
+          id: doctor.id,
+          name: doctor.name,
+          phone_no: doctor.phone_no,
+          email: doctor.email,
+          specialization: doctor.specialization,
+          status: doctor.status,
+          image: doctor.image,
+          schedules: doctor.schedules,
+        }));
+
+      return {
+        id: department.id,
+        name: department.name,
+        image: department.image,
+        description: department.description,
+        doctors: departmentDoctors,
+      };
+    });
+
+    res.json(result);
   } catch (err) {
-    console.error("Error fetching departments with doctors:", err);
+    console.error(
+      "Error fetching departments with doctors and schedules:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 });
