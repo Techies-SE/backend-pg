@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const {pool} = require("../db");
+const { pool } = require("../db");
 const authenticateToken = require("../middleware/auth");
 
 // Get all doctors with their schedules
@@ -62,7 +62,7 @@ router.get("/doctor/:id", async (req, res) => {
 
     const { rows } = await pool.query(
       `SELECT 
-        doctors.id, doctors.name, doctors.phone_no, doctors.email, doctors.specialization, 
+        doctors.id, doctors.name, doctors.phone_no, doctors.email, doctors.specialization, doctors.status,
         doctor_schedules.id AS schedule_id, doctor_schedules.day_of_week, 
         doctor_schedules.start_time, doctor_schedules.end_time
       FROM doctors
@@ -75,7 +75,7 @@ router.get("/doctor/:id", async (req, res) => {
       return res.status(404).json({ message: "Doctor not found" });
     }
 
-    const { id: doctorId, name, phone_no, email, specialization } = rows[0];
+    const { id: doctorId, name, phone_no, email, specialization, status } = rows[0];
 
     const schedules = rows
       .filter((row) => row.schedule_id)
@@ -93,6 +93,7 @@ router.get("/doctor/:id", async (req, res) => {
         phone_no,
         email,
         specialization,
+        status,
         schedules,
       },
     });
@@ -175,9 +176,10 @@ router.put(
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      const { rows: doctor } = await pool.query(`SELECT id FROM doctors WHERE id = $1`, [
-        doctor_id,
-      ]);
+      const { rows: doctor } = await pool.query(
+        `SELECT id FROM doctors WHERE id = $1`,
+        [doctor_id]
+      );
       if (doctor.length === 0) {
         return res.status(404).json({ message: "Doctor not found" });
       }
