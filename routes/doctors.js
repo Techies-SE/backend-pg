@@ -8,40 +8,40 @@ const authenticateToken = require("../middleware/auth");
 //   try {
 //     console.log("1. Route hit");
 //     console.log("2. User:", req.user);
-    
+
 //     const doctorId = req.user?.id;
 //     if (!doctorId) {
 //       return res.status(400).json({ error: "No doctor ID found" });
 //     }
-    
+
 //     console.log("3. Doctor ID:", doctorId);
-    
+
 //     const { rows } = await pool.query(
-//       `SELECT 
+//       `SELECT
 //         p.name AS patient_name,
 //         p.id AS patient_id,
 //         p.hn_number,
 //         ltm.test_name,
 //         lt.lab_test_date,
 //         lt.id AS lab_test_id
-//       FROM 
+//       FROM
 //         lab_tests lt
-//       JOIN 
+//       JOIN
 //         lab_tests_master ltm ON lt.lab_test_master_id = ltm.id
-//       JOIN 
+//       JOIN
 //         patients p ON lt.patient_id = p.id
-//       JOIN 
+//       JOIN
 //         patient_doctor pd ON pd.patient_id = p.id
-//       WHERE 
+//       WHERE
 //         pd.doctor_id = $1
-//       ORDER BY 
+//       ORDER BY
 //         lt.lab_test_date DESC
 //       LIMIT 3`, // Simple test query first
 //       [doctorId]
 //     );
-    
+
 //     console.log("4. Query successful:", rows);
-    
+
 //     res.json({ success: true, doctorId, testData: rows });
 //   } catch (error) {
 //     console.error("Detailed error:", error.message, error.stack);
@@ -121,19 +121,18 @@ router.get("/patients-lab-tests", authenticateToken, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `
-        SELECT 
-          p.id AS patient_id,        
-          p.hn_number,
-          p.name AS patient_name,
-          lt.id AS lab_test_id,
-          ltm.test_name AS lab_test_name,
-          lt.lab_test_date
-        FROM patients p
-        JOIN lab_tests lt ON p.id = lt.patient_id
-        JOIN lab_tests_master ltm ON lt.lab_test_master_id = ltm.id
-        JOIN recommendations r ON r.lab_test_id = lt.id
-        WHERE p.doctor_id = $1 AND r.status = 'sent'
-        ORDER BY lt.lab_test_date DESC
+       SELECT 
+      p.id AS patient_id,        
+      p.hn_number,
+      p.name AS patient_name,
+      r.lab_test_date,
+      pd.doctor_id
+      FROM patients p
+      JOIN recommendations r ON r.hn_number = p.hn_number
+      JOIN patient_doctor pd ON pd.patient_id = p.id
+      WHERE r.status = 'pending'
+      AND pd.doctor_id = $1 
+      ORDER BY r.lab_test_date DESC;
       `,
       [doctorId]
     );
