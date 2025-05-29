@@ -285,7 +285,7 @@ router.get(
         r.id AS recommendation_id,
         r.lab_test_date,
         r.generated_recommendation,
-        d.name AS doctor_name,
+        d.name AS doctor_name
       FROM recommendations r
       JOIN doctors d ON r.doctor_id = d.id
     `
