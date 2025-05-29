@@ -158,7 +158,7 @@ router.put(
 
       // Update the appointment status to Scheduled
       await pool.query(
-        `UPDATE appointments SET status = 'Scheduled' WHERE id = $1`,
+        `UPDATE appointments SET status = 'scheduled' WHERE id = $1`,
         [req.params.appointmentId]
       );
 
