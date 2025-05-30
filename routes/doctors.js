@@ -178,10 +178,10 @@ router.get(
 );
 
 router.get(
-  "/:hn_number/lab-test/:lab_test_id",
+  "/:hn_number/lab-test",
   authenticateToken,
   async (req, res) => {
-    const { hn_number, lab_test_id } = req.params;
+    const { hn_number} = req.params;
 
     try {
       const client = await pool.connect();
@@ -208,7 +208,6 @@ router.get(
   
         lt.id AS lab_test_id,
         lt.lab_test_date,
-        lt.status AS lab_test_status,
         ltm.test_name,
   
         li.id AS lab_item_id,
@@ -221,7 +220,7 @@ router.get(
         r.id,
         r.generated_recommendation,
         r.status AS recommendation_status,
-        r.updated_at AS recommendation_updated_at
+        r.lab_test_date AS lab_test_date
   
       FROM patients p
       LEFT JOIN patient_data pd ON pd.hn_number = p.hn_number
@@ -230,12 +229,13 @@ router.get(
       LEFT JOIN lab_results lr ON lr.lab_test_id = lt.id
       LEFT JOIN lab_items li ON li.id = lr.lab_item_id
       LEFT JOIN lab_references ref ON ref.lab_item_id = li.id
-      LEFT JOIN recommendations r ON r.lab_test_id = lt.id
+	  LEFT JOIN recommendations r ON r.hn_number = p.hn_number
+      
   
-      WHERE p.hn_number = $1 AND lt.id = $2
-      ORDER BY lr.lab_item_id ASC
+      WHERE p.hn_number = $1
+      ORDER BY r.lab_test_date ASC;
       `,
-        [hn_number, lab_test_id]
+        [hn_number]
       );
 
       client.release();
