@@ -287,6 +287,7 @@ router.get(
         r.generated_recommendation,
         d.name AS doctor_name
       FROM recommendations r
+      where r.status = 'approved'
       JOIN doctors d ON r.doctor_id = d.id
     `
       );
