@@ -203,9 +203,9 @@ router.post("/send-recommendation", authenticateToken, async (req, res) => {
   }
 });
 
-router.patch("/:lab_test_id", authenticateToken, async (req, res) => {
+router.patch("/:recommendation_id", authenticateToken, async (req, res) => {
   try {
-    const { lab_test_id } = req.params;
+    const { recommendation_id } = req.params;
     const { generated_recommendation } = req.body;
 
     if (!generated_recommendation) {
@@ -219,8 +219,8 @@ router.patch("/:lab_test_id", authenticateToken, async (req, res) => {
 
     try {
       const { rowCount } = await client.query(
-        "UPDATE recommendations SET generated_recommendation = $1, updated_at = NOW() WHERE lab_test_id = $2",
-        [generated_recommendation, lab_test_id]
+        "UPDATE recommendations SET generated_recommendation = $1 WHERE id = $2",
+        [generated_recommendation, recommendation_id]
       );
 
       if (rowCount === 0) {
@@ -234,9 +234,8 @@ router.patch("/:lab_test_id", authenticateToken, async (req, res) => {
         success: true,
         message: "Recommendation updated successfully",
         data: {
-          lab_test_id,
+          recommendation_id,
           generated_recommendation,
-          updated_at: new Date(),
         },
       });
     } finally {
@@ -252,16 +251,16 @@ router.patch("/:lab_test_id", authenticateToken, async (req, res) => {
   }
 });
 
-router.patch("/:lab_test_id/approve", authenticateToken, async (req, res) => {
+router.patch("/:recommendation_id/approve", authenticateToken, async (req, res) => {
   try {
-    const { lab_test_id } = req.params;
+    const { recommendationId } = req.params;
 
     const client = await pool.connect();
 
     try {
       const { rowCount } = await client.query(
-        'UPDATE recommendations SET status = "approved", updated_at = NOW() WHERE lab_test_id = $1',
-        [lab_test_id]
+        'UPDATE recommendations SET status = "approved" WHERE id = $1',
+        [recommendationId]
       );
 
       if (rowCount === 0) {
@@ -275,7 +274,7 @@ router.patch("/:lab_test_id/approve", authenticateToken, async (req, res) => {
         success: true,
         message: "Recommendation approved successfully",
         data: {
-          lab_test_id,
+          recommendationId,
           recommendation_status: "approved",
           updated_at: new Date(),
         },
