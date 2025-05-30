@@ -130,7 +130,6 @@ router.get("/patients-lab-tests", authenticateToken, async (req, res) => {
       FROM patients p
       JOIN recommendations r ON r.hn_number = p.hn_number
       JOIN patient_doctor pd ON pd.patient_id = p.id
-      WHERE r.status = 'pending'
       AND pd.doctor_id = $1 
       ORDER BY r.lab_test_date DESC;
       `,
@@ -177,17 +176,14 @@ router.get(
   }
 );
 
-router.get(
-  "/:hn_number/lab-test",
-  authenticateToken,
-  async (req, res) => {
-    const { hn_number} = req.params;
+router.get("/:hn_number/lab-test", authenticateToken, async (req, res) => {
+  const { hn_number } = req.params;
 
-    try {
-      const client = await pool.connect();
+  try {
+    const client = await pool.connect();
 
-      const { rows } = await client.query(
-        `
+    const { rows } = await client.query(
+      `
       SELECT
         p.hn_number,
         p.name,
@@ -235,71 +231,70 @@ router.get(
       WHERE p.hn_number = $1
       ORDER BY r.lab_test_date ASC;
       `,
-        [hn_number]
-      );
+      [hn_number]
+    );
 
-      client.release();
+    client.release();
 
-      if (rows.length === 0) {
-        return res
-          .status(404)
-          .json({ message: "No data found for this patient and lab test" });
-      }
-
-      // Construct response
-      const patient = {
-        hn_number: rows[0].hn_number,
-        name: rows[0].name,
-        citizen_id: rows[0].citizen_id,
-        phone_no: rows[0].phone_no,
-        lab_data_status: rows[0].lab_data_status,
-        account_status: rows[0].account_status,
-        registered_at: rows[0].registered_at,
-        updated_at: rows[0].updated_at,
-        patient_data: {
-          gender: rows[0].gender,
-          blood_type: rows[0].blood_type,
-          age: rows[0].age,
-          date_of_birth: rows[0].date_of_birth,
-          weight: rows[0].weight,
-          height: rows[0].height,
-          bmi: rows[0].bmi,
-        },
-        lab_test: {
-          lab_test_id: rows[0].lab_test_id,
-          lab_test_date: rows[0].lab_test_date,
-          status: rows[0].lab_test_status,
-          test_name: rows[0].test_name,
-          recommendation_id: rows[0].id,
-          generated_recommendation: rows[0].generated_recommendation,
-          recommendation_status: rows[0].recommendation_status,
-          recommendation_updated_at: rows[0].recommendation_updated_at,
-          results: [],
-        },
-      };
-
-      const resultMap = new Set();
-
-      for (const row of rows) {
-        if (row.lab_item_id && !resultMap.has(row.lab_item_id)) {
-          patient.lab_test.results.push({
-            lab_item_name: row.lab_item_name,
-            lab_item_status: row.lab_item_status,
-            unit: row.unit,
-            value: row.lab_item_value,
-            normal_range: row.normal_range,
-          });
-          resultMap.add(row.lab_item_id);
-        }
-      }
-
-      res.json(patient);
-    } catch (err) {
-      console.error("Error fetching specific lab test details:", err);
-      res.status(500).json({ message: "Server error" });
+    if (rows.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No data found for this patient and lab test" });
     }
+
+    // Construct response
+    const patient = {
+      hn_number: rows[0].hn_number,
+      name: rows[0].name,
+      citizen_id: rows[0].citizen_id,
+      phone_no: rows[0].phone_no,
+      lab_data_status: rows[0].lab_data_status,
+      account_status: rows[0].account_status,
+      registered_at: rows[0].registered_at,
+      updated_at: rows[0].updated_at,
+      patient_data: {
+        gender: rows[0].gender,
+        blood_type: rows[0].blood_type,
+        age: rows[0].age,
+        date_of_birth: rows[0].date_of_birth,
+        weight: rows[0].weight,
+        height: rows[0].height,
+        bmi: rows[0].bmi,
+      },
+      lab_test: {
+        lab_test_id: rows[0].lab_test_id,
+        lab_test_date: rows[0].lab_test_date,
+        status: rows[0].lab_test_status,
+        test_name: rows[0].test_name,
+        recommendation_id: rows[0].id,
+        generated_recommendation: rows[0].generated_recommendation,
+        recommendation_status: rows[0].recommendation_status,
+        recommendation_updated_at: rows[0].recommendation_updated_at,
+        results: [],
+      },
+    };
+
+    const resultMap = new Set();
+
+    for (const row of rows) {
+      if (row.lab_item_id && !resultMap.has(row.lab_item_id)) {
+        patient.lab_test.results.push({
+          lab_item_name: row.lab_item_name,
+          lab_item_status: row.lab_item_status,
+          unit: row.unit,
+          value: row.lab_item_value,
+          normal_range: row.normal_range,
+        });
+        resultMap.add(row.lab_item_id);
+      }
+    }
+
+    res.json(patient);
+  } catch (err) {
+    console.error("Error fetching specific lab test details:", err);
+    res.status(500).json({ message: "Server error" });
   }
-);
+});
 
 router.get("/patient-count", authenticateToken, async (req, res) => {
   const doctorId = req.user.id;
