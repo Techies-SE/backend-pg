@@ -274,7 +274,7 @@ router.patch("/:recommendation_id/approve", authenticateToken, async (req, res) 
         success: true,
         message: "Recommendation approved successfully",
         data: {
-          recommendationId,
+          recommendation_id,
           recommendation_status: "approved",
           updated_at: new Date(),
         },
