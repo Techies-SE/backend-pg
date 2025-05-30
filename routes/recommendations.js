@@ -259,8 +259,8 @@ router.patch("/:recommendation_id/approve", authenticateToken, async (req, res) 
 
     try {
       const { rowCount } = await client.query(
-        'UPDATE recommendations SET status = "approved" WHERE id = $1',
-        [recommendation_id]
+        'UPDATE recommendations SET status = $1 WHERE id = $2',
+        ['approved',recommendation_id]
       );
 
       if (rowCount === 0) {
