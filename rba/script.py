@@ -130,7 +130,7 @@ def evaluate_uric_acid(uric_acid, gender):
     return results
 
 # Define a function to evaluate complete blood count (CBC)
-def evaluate_cbc(hct, mcv, wbc, neutrophile, eosinophile, monocyte, plt_count, gender):
+def evaluate_cbc(hct, mcv, wbc, neutrophile, eosinophile, monocyte, plt_count, gender, basophile, lymphocyte):
     results = {}
 
     # Evaluate HCT
@@ -195,6 +195,31 @@ def evaluate_cbc(hct, mcv, wbc, neutrophile, eosinophile, monocyte, plt_count, g
         results['PLT Count'] = {"classification": "เกล็ดเลือดสูง", "recommendation": "อาจพบในพาหะธาลัสซีเมีย หรือมีอาการไข้เรื้อรัง ควรปรึกษาแพทย์"}
     elif plt_count > 600000:
         results['PLT Count'] = {"classification": "เกล็ดเลือดสูงมาก", "recommendation": "ควรปรึกษาแพทย์เพื่อหาสาเหตุ"}
+    
+    # Evaluate BASOPHILE
+    baso_count = wbc * basophile / 100
+    if 0 <= basophile <= 1 and 0.01 <= baso_count <= 0.1:
+        results['Basophile'] = {"classification": "ปกติ", "recommendation": None}
+    elif basophile > 1 or baso_count > 0.1:
+        results['Basophile'] = {
+            "classification": "Basophile สูง",
+            "recommendation": "อาจเกิดจากภาวะภูมิแพ้ หรือโรคไขกระดูก ควรพบแพทย์"
+        }
+    
+     # Evaluate LYMPHOCYTE
+    lymph_count = wbc * lymphocyte / 100
+    if 20 <= lymphocyte <= 40 and 1.0 <= lymph_count <= 3.0:
+        results['Lymphocyte'] = {"classification": "ปกติ", "recommendation": None}
+    elif lymphocyte < 20 or lymph_count < 1.0:
+        results['Lymphocyte'] = {
+            "classification": "Lymphocyte ต่ำ",
+            "recommendation": "อาจเกิดจากภูมิคุ้มกันบกพร่อง หรือได้รับยาบางชนิด"
+        }
+    elif lymphocyte > 40 or lymph_count > 3.0:
+        results['Lymphocyte'] = {
+            "classification": "Lymphocyte สูง",
+            "recommendation": "อาจเกิดจากการติดเชื้อไวรัส หรือโรคเลือด ควรตรวจเพิ่มเติม"
+        }
 
     return results
 
@@ -238,7 +263,9 @@ def evaluate_lab_results(lab_test_master_id, lab_item_values):
             lab_item_values['Eosinophile'],
             lab_item_values['Monocyte'],
             lab_item_values['PLT Count'],
-            lab_item_values['Gender']
+            lab_item_values['Gender'],
+            lab_item_values['Basophile'],
+            lab_item_values['Lymphocyte']
         )
     else:
         return {"error": "Unknown lab test"}
