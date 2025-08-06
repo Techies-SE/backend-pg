@@ -778,7 +778,7 @@ router.put("/:hn_number", authenticateToken, async (req, res) => {
         SET name = $1, citizen_id = $2, phone_no = $3, updated_at = NOW()
         WHERE hn_number = $4
         `,
-      [name, citizen_id, phone_no, doctor_id, hn_number]
+      [name, citizen_id, phone_no, hn_number]
     );
 
     // Check if patient_data exists
