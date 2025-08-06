@@ -753,11 +753,11 @@ router.get("/:hn_number", authenticateToken, async (req, res) => {
 // Edit details of a patient
 router.put("/:hn_number", authenticateToken, async (req, res) => {
   const hn_number = req.params.hn_number;
+  console.log("Updating patient:", hn_number);
   const {
     name,
     citizen_id,
     phone_no,
-    doctor_id,
     gender,
     blood_type,
     age,
@@ -775,8 +775,8 @@ router.put("/:hn_number", authenticateToken, async (req, res) => {
     await client.query(
       `
         UPDATE patients
-        SET name = $1, citizen_id = $2, phone_no = $3, doctor_id = $4, updated_at = NOW()
-        WHERE hn_number = $5
+        SET name = $1, citizen_id = $2, phone_no = $3, updated_at = NOW()
+        WHERE hn_number = $4
         `,
       [name, citizen_id, phone_no, doctor_id, hn_number]
     );
