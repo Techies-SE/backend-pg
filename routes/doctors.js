@@ -116,22 +116,54 @@ router.get("/profile", authenticateToken, async (req, res) => {
   }
 });
 
+// router.get("/patients-lab-tests", authenticateToken, async (req, res) => {
+//   const doctorId = req.user.id;
+//   try {
+//     const { rows } = await pool.query(
+//       `
+//        SELECT
+//       p.id AS patient_id,
+//       p.hn_number,
+//       p.name AS patient_name,
+//       r.lab_test_date,
+//       pd.doctor_id
+//       FROM patients p
+//       JOIN recommendations r ON r.hn_number = p.hn_number
+//       JOIN patient_doctor pd ON pd.patient_id = p.id
+//       AND pd.doctor_id = $1
+//       ORDER BY r.lab_test_date DESC;
+//       `,
+//       [doctorId]
+//     );
+
+//     res.status(200).json({ success: true, data: rows });
+//   } catch (err) {
+//     console.error("Error fetching patients and lab tests:", err);
+//     res.status(500).json({ success: false, message: "Internal server error" });
+//   }
+// });
+
 router.get("/patients-lab-tests", authenticateToken, async (req, res) => {
   const doctorId = req.user.id;
   try {
     const { rows } = await pool.query(
       `
        SELECT 
-      p.id AS patient_id,        
+      p.id AS patient_id,
       p.hn_number,
       p.name AS patient_name,
-      r.lab_test_date,
-      pd.doctor_id
+      lt.id AS lab_test_id,
+      lt.lab_test_date,
+      d.id AS doctor_id,
+      d.name AS doctor_name,
+      r.status AS recommendation_status
       FROM patients p
-      JOIN recommendations r ON r.hn_number = p.hn_number
-      JOIN patient_doctor pd ON pd.patient_id = p.id
-      AND pd.doctor_id = $1 
-      ORDER BY r.lab_test_date DESC;
+      JOIN lab_tests lt ON lt.patient_id = p.id
+      JOIN recommendations r ON r.lab_test_id = lt.id
+      JOIN doctors d ON d.id = r.doctor_id
+      WHERE d.id = $1   -- filter by doctor if needed
+      ORDER BY lt.lab_test_date DESC;
+
       `,
       [doctorId]
     );
