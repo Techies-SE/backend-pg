@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require("../db"); // Now using pg pool
 const bcrypt = require("bcrypt");
 const authenticateToken = require("../middleware/auth");
+require("dotenv").config();
 
 // router.get("/recent-lab-tests", authenticateToken, async (req, res) => {
 //   try {
@@ -449,7 +450,10 @@ router.get("/:id", authenticateToken, async (req, res) => {
     const doctor = rows[0];
 
     if (doctor.image) {
-      doctor.imageUrl = `http://localhost:3000/${doctor.image}`;
+      // doctor.imageUrl = `http://localhost:3000/${doctor.image}`;
+      const baseUrl =
+        process.env.BASE_URL || "https://backend-pg-cm2b.onrender.com";
+      doctor.imageUrl = `${baseUrl}/${doctor.image}`;
     }
 
     res.json(doctor);
