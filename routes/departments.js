@@ -319,13 +319,15 @@ router.get("/:id", authenticateToken, async (req, res) => {
       return res.status(404).json({ message: "Department not found" });
     }
 
+    
+
     const department = {
       id: rows[0].department_id,
       name: rows[0].department_name,
       description: rows[0].department_description,
       image: rows[0].department_image,
       imageUrl: rows[0].department_image
-        ? `http://localhost:3000/${rows[0].department_image}`
+        ? `https://backend-pg-cm2b.onrender.com/${rows[0].department_image}`
         : null,
       doctors: rows
         .filter((row) => row.doctor_name !== null)
