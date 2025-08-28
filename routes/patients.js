@@ -1125,7 +1125,7 @@ router.get("/:hn_number/:lab_test_id", authenticateToken, async (req, res) => {
           r.created_at AS recommendation_created_at,
           r.updated_at AS recommendation_updated_at
         FROM patients p
-        LEFT JOIN recommendations r ON r.patient_id = p.id
+        LEFT JOIN recommendations r ON r.hn_number = p.hn_number
         WHERE p.hn_number = $1 
         AND DATE(r.created_at) = DATE($2)
         ORDER BY r.created_at DESC
