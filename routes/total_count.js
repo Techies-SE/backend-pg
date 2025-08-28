@@ -99,7 +99,7 @@ router.get("/activity", async (req, res) => {
 
   try {
     const result = await pool.query(query);
-    res.json(result.row); // return as JSON to frontend
+    res.json(result.rows); // return as JSON to frontend
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
