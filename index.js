@@ -24,6 +24,7 @@ const labTestRoute = require("./routes/lab_tests");
 const generateRecommendationRoute = require("./routes/generateRecommendations");
 const imageUploadRoute = require("./routes/image_upload");
 const recentLab = require("./routes/recent-lab");
+const dashboardRoutes = require("./routes/total_count");
 
 require("dotenv").config();
 
@@ -59,6 +60,7 @@ app.use("/api", generateRecommendationRoute);
 app.use("/image", imageUploadRoute);
 app.use("/recent-lab-tests", recentLab);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/dashboard", dashboardRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
