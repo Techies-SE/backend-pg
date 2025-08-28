@@ -123,16 +123,17 @@ router.get("/patients-lab-tests", authenticateToken, async (req, res) => {
     const { rows } = await pool.query(
       `
        SELECT 
-      p.id AS patient_id,        
-      p.hn_number,
-      p.name AS patient_name,
-      r.lab_test_date,
-      pd.doctor_id
-      FROM patients p
-      JOIN recommendations r ON r.hn_number = p.hn_number
-      JOIN patient_doctor pd ON pd.patient_id = p.id
-      AND pd.doctor_id = $1 
-      ORDER BY r.lab_test_date DESC;
+        p.id AS patient_id,
+        p.hn_number,
+        p.name AS patient_name,
+        lt.id AS lab_test_id,
+        lt.doctor_id AS doctor_id,
+        lt.lab_test_date AS test_date
+        FROM patients p
+        JOIN lab_tests lt 
+        ON lt.patient_id = p.id
+        WHERE lt.doctor_id = $1
+        ORDER BY lt.lab_test_date DESC;
       `,
       [doctorId]
     );
