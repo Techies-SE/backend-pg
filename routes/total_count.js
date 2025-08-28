@@ -22,7 +22,7 @@ router.get("/active-appointments", authenticateToken, async (req, res) => {
 router.get("/active-patients", authenticateToken, async (req, res) => {
   try {
     const { rows: result } = await pool.query(
-      `SELECT COUNT(id) AS active_patient
+      `SELECT COUNT(id) AS active_patients
         FROM patients`
     );
     res.json({ active_patients: result[0].active_patients });
@@ -99,7 +99,7 @@ router.get("/activity", async (req, res) => {
 
   try {
     const result = await pool.query(query);
-    res.json(result); // return as JSON to frontend
+    res.json(result.row); // return as JSON to frontend
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
