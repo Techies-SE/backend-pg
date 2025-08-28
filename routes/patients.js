@@ -863,48 +863,49 @@ router.get(
 
       const { rows } = await client.query(
         `
-        SELECT
-          p.hn_number,
-          p.name,
-          p.citizen_id,
-          p.phone_no,
-          p.lab_data_status,
-          p.account_status,
-          p.registered_at,
-          p.updated_at,
+  SELECT
+    p.hn_number,
+    p.name,
+    p.citizen_id,
+    p.phone_no,
+    p.lab_data_status,
+    p.account_status,
+    p.registered_at,
+    p.updated_at,
 
-          pd.gender,
-          pd.blood_type,
-          pd.age,
-          pd.date_of_birth,
-          pd.weight,
-          pd.height,
-          pd.bmi,
+    pd.gender,
+    pd.blood_type,
+    pd.age,
+    pd.date_of_birth,
+    pd.weight,
+    pd.height,
+    pd.bmi,
 
-          lt.id AS lab_test_id,
-          lt.lab_test_date,
-          ltm.test_name,
+    lt.id AS lab_test_id,
+    lt.lab_test_date,
+    ltm.test_name,
 
-          li.id AS lab_item_id,
-          li.lab_item_name,
-          li.unit,
-          lr.lab_item_value,
-          lr.lab_item_status,
-          ref.normal_range
+    li.id AS lab_item_id,
+    li.lab_item_name,
+    li.unit,
+    lr.lab_item_value,
+    lr.lab_item_status,
+    ref.normal_range
 
-        FROM patients p
-        LEFT JOIN patient_data pd ON pd.hn_number = p.hn_number
-        LEFT JOIN lab_tests lt ON lt.patient_id = p.id
-        LEFT JOIN lab_tests_master ltm ON ltm.id = lt.lab_test_master_id
-        LEFT JOIN lab_results lr ON lr.lab_test_id = lt.id
-        LEFT JOIN lab_items li ON li.id = lr.lab_item_id
-        LEFT JOIN lab_references ref ON ref.lab_item_id = li.id
+  FROM patients p
+  LEFT JOIN patient_data pd ON pd.hn_number = p.hn_number
+  LEFT JOIN lab_tests lt ON lt.patient_id = p.id
+  LEFT JOIN lab_tests_master ltm ON ltm.id = lt.lab_test_master_id
+  LEFT JOIN lab_results lr ON lr.lab_test_id = lt.id
+  LEFT JOIN lab_items li ON li.id = lr.lab_item_id
+  LEFT JOIN lab_references ref ON ref.lab_item_id = li.id
 
-        WHERE p.hn_number = $1
-          AND DATE(lt.lab_test_date) = $2::date
-        ORDER BY lt.lab_test_date DESC
-      `,
-        [hn_number, lab_test_date] // lab_test_date stays a string like "2025-08-21"
+  WHERE p.hn_number = $1
+    AND lt.lab_test_date >= $2::date
+    AND lt.lab_test_date < ($2::date + INTERVAL '1 day')
+  ORDER BY lt.lab_test_date DESC
+  `,
+        [hn_number, lab_test_date]
       );
 
       client.release();
