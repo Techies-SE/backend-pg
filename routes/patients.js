@@ -1121,9 +1121,7 @@ router.get("/:hn_number/:lab_test_id", authenticateToken, async (req, res) => {
       `
         SELECT
           r.id AS recommendation_id,
-          r.generated_recommendation,
-          r.created_at AS recommendation_created_at,
-          r.updated_at AS recommendation_updated_at
+          r.generated_recommendation
         FROM patients p
         LEFT JOIN recommendations r ON r.hn_number = p.hn_number
         WHERE p.hn_number = $1 
