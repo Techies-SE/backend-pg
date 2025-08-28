@@ -14,7 +14,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
     client = await pool.connect();
 
     const { rows: patientResults } = await client.query(
-      `SELECT id, hn_number, name, citizen_id, phone_no, doctor_id, lab_data_status, account_status 
+      `SELECT id, hn_number, name, citizen_id, phone_no, lab_data_status, account_status 
        FROM patients 
        WHERE id = $1`,
       [userId]
@@ -41,7 +41,6 @@ router.get("/profile", authenticateToken, async (req, res) => {
         name: patient.name,
         citizen_id: patient.citizen_id,
         phone_no: patient.phone_no,
-        doctor_id: patient.doctor_id,
         lab_data_status: patient.lab_data_status,
         account_status: patient.account_status,
         lab_data: labResults.length > 0 ? labResults : [],
