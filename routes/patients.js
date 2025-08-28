@@ -271,15 +271,12 @@ router.get(
 );
 
 // Recommendation (Protected Route)
-router.get(
-  "/recommendations",
-  authenticateToken,
-  async (req, res) => {
-    const userId = req.user.id;
+router.get("/recommendations", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
 
-    try {
-      const { rows } = await pool.query(
-        `
+  try {
+    const { rows } = await pool.query(
+      `
       SELECT 
         r.id AS recommendation_id,
         r.lab_test_date,
@@ -289,17 +286,14 @@ router.get(
       JOIN doctors d ON r.doctor_id = d.id
       WHERE r.status = 'approved'
     `
-      );
+    );
 
-      res.status(200).json({ success: true, data: rows });
-    } catch (error) {
-      console.error("Error fetching recommendations:", error);
-      res
-        .status(500)
-        .json({ success: false, message: "Internal server error" });
-    }
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error("Error fetching recommendations:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
-);
+});
 
 // Get all patients
 router.get("/", authenticateToken, async (req, res) => {
@@ -745,6 +739,115 @@ router.get("/:hn_number", authenticateToken, async (req, res) => {
     res.json(patient);
   } catch (err) {
     console.error("Error fetching patient details:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+//View detials of a patient by hn_number and group by lab_test_id and date
+router.get("/:hn_number/:lab_test_id", authenticateToken, async (req, res) => {
+  const { hn_number, lab_test_id } = req.params;
+
+  try {
+    const client = await pool.connect();
+
+    const { rows } = await client.query(
+      `
+        SELECT
+          p.hn_number,
+          p.name,
+          p.citizen_id,
+          p.phone_no,
+          p.lab_data_status,
+          p.account_status,
+          p.registered_at,
+          p.updated_at,
+
+          pd.gender,
+          pd.blood_type,
+          pd.age,
+          pd.date_of_birth,
+          pd.weight,
+          pd.height,
+          pd.bmi,
+
+          lt.id AS lab_test_id,
+          lt.lab_test_date,
+          ltm.test_name,
+
+          li.id AS lab_item_id,
+          li.lab_item_name,
+          li.unit,
+          lr.lab_item_value,
+          lr.lab_item_status,
+          ref.normal_range
+
+        FROM patients p
+        LEFT JOIN patient_data pd ON pd.hn_number = p.hn_number
+        LEFT JOIN lab_tests lt ON lt.patient_id = p.id
+        LEFT JOIN lab_tests_master ltm ON ltm.id = lt.lab_test_master_id
+        LEFT JOIN lab_results lr ON lr.lab_test_id = lt.id
+        LEFT JOIN lab_items li ON li.id = lr.lab_item_id
+        LEFT JOIN lab_references ref ON ref.lab_item_id = li.id
+
+        WHERE p.hn_number = $1 AND lt.id = $2
+        ORDER BY lt.lab_test_date DESC
+      `,
+      [hn_number, lab_test_id]
+    );
+
+    client.release();
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "No lab test data found for given HN and Lab Test ID",
+      });
+    }
+
+    // Build a structured JSON response
+    const patient = {
+      hn_number: rows[0].hn_number,
+      name: rows[0].name,
+      citizen_id: rows[0].citizen_id,
+      phone_no: rows[0].phone_no,
+      lab_data_status: rows[0].lab_data_status,
+      account_status: rows[0].account_status,
+      registered_at: rows[0].registered_at,
+      updated_at: rows[0].updated_at,
+      patient_data: {
+        gender: rows[0].gender,
+        blood_type: rows[0].blood_type,
+        age: rows[0].age,
+        date_of_birth: rows[0].date_of_birth,
+        weight: rows[0].weight,
+        height: rows[0].height,
+        bmi: rows[0].bmi,
+      },
+      lab_test: {
+        id: rows[0].lab_test_id,
+        test_name: rows[0].test_name,
+        lab_test_date: rows[0].lab_test_date,
+        results: [],
+      },
+    };
+
+    const resultSet = new Set();
+
+    for (const row of rows) {
+      if (row.lab_item_id && !resultSet.has(row.lab_item_id)) {
+        patient.lab_test.results.push({
+          lab_item_name: row.lab_item_name,
+          unit: row.unit,
+          value: row.lab_item_value,
+          lab_item_status: row.lab_item_status,
+          normal_range: row.normal_range,
+        });
+        resultSet.add(row.lab_item_id);
+      }
+    }
+
+    res.json(patient);
+  } catch (err) {
+    console.error("Error fetching lab test details:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
