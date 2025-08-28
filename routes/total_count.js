@@ -12,7 +12,7 @@ router.get("/active-appointments", authenticateToken, async (req, res) => {
         AND appointment_date >= date_trunc('week', CURRENT_DATE)
         AND appointment_date < date_trunc('week', CURRENT_DATE) + interval '1 week';`
     );
-    res.json({ total_appointments: result[0].total });
+    res.json({ total_appointments: result[0].active_appointment});
   } catch (error) {
     console.error("Error fetching active apointments:", error);
     res.status(500).json({ message: "Internal Server Error" });
@@ -25,7 +25,7 @@ router.get("/active-patients", authenticateToken, async (req, res) => {
       `SELECT COUNT(id) AS active_patient
         FROM patients`
     );
-    res.json({ active_patients: result[0].total });
+    res.json({ active_patients: result[0].active_patients });
   } catch (error) {
     console.error("Error fetching active patients:", error);
     res.status(500).json({ message: "Internal Server Error" });
@@ -39,7 +39,7 @@ router.get("/active-doctors", authenticateToken, async (req, res) => {
         FROM doctors 
         WHERE status = 'active'`
     );
-    res.json({ total_doctors: result[0].total });
+    res.json({ total_doctors: result[0].total_doctor });
   } catch (error) {
     console.error("Error fetching active doctors:", error);
     res.status(500).json({ message: "Internal Server Error" });
@@ -52,7 +52,7 @@ router.get("/active-departments", authenticateToken, async (req, res) => {
       `SELECT count(id) AS total_departments
         FROM departments`
     );
-    res.json({ total_departments: result[0].total });
+    res.json({ total_departments: result[0].total_departments });
   } catch (error) {
     console.error("Error fetching active departments:", error);
     res.status(500).json({ message: "Internal Server Error" });
@@ -98,7 +98,7 @@ router.get("/activity", async (req, res) => {
   `;
 
   try {
-    const result = await pool(query);
+    const result = await pool.query(query);
     res.json(result); // return as JSON to frontend
   } catch (err) {
     console.error(err);
