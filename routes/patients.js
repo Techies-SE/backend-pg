@@ -1121,7 +1121,8 @@ router.get("/:hn_number/:lab_test_id", authenticateToken, async (req, res) => {
       `
         SELECT
           r.id AS recommendation_id,
-          r.generated_recommendation
+          r.generated_recommendation,
+          r.status
         FROM patients p
         LEFT JOIN recommendations r ON r.hn_number = p.hn_number
         WHERE p.hn_number = $1 
@@ -1212,8 +1213,7 @@ router.get("/:hn_number/:lab_test_id", authenticateToken, async (req, res) => {
       patient.recommendations = recommendationsQuery.rows.map((row) => ({
         id: row.recommendation_id,
         generated_recommendation: row.generated_recommendation,
-        created_at: row.recommendation_created_at,
-        updated_at: row.recommendation_updated_at,
+        status: row.status
       }));
     }
 
