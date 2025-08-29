@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const {pool} = require("../db");
+const { pool } = require("../db");
 const authenticateToken = require("../middleware/auth");
 
 router.post("/", async (req, res) => {
@@ -251,45 +251,51 @@ router.patch("/:recommendation_id", authenticateToken, async (req, res) => {
   }
 });
 
-router.patch("/:recommendation_id/approve", authenticateToken, async (req, res) => {
-  try {
-    const { recommendation_id } = req.params;
-
-    const client = await pool.connect();
-
+router.patch(
+  "/:recommendation_id/approve",
+  authenticateToken,
+  async (req, res) => {
     try {
-      const { rowCount } = await client.query(
-        'UPDATE recommendations SET status = $1 WHERE id = $2',
-        ['approved',recommendation_id]
-      );
+      const { recommendation_id } = req.params;
+      const { doctor_recommendation } = req.body;
 
-      if (rowCount === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "Recommendation not found or no changes made",
+      const client = await pool.connect();
+
+      try {
+        const { rowCount } = await client.query(
+          "UPDATE recommendations SET status = $1, doctor_recommendation = $2 WHERE id = $3",
+          ["approved", doctor_recommendation, recommendation_id]
+        );
+
+        if (rowCount === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "Recommendation not found or no changes made",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "Recommendation approved successfully",
+          data: {
+            recommendation_id,
+            recommendation_status: "approved",
+            doctor_recommendation,
+            updated_at: new Date(),
+          },
         });
+      } finally {
+        client.release();
       }
-
-      return res.status(200).json({
-        success: true,
-        message: "Recommendation approved successfully",
-        data: {
-          recommendation_id,
-          recommendation_status: "approved",
-          updated_at: new Date(),
-        },
+    } catch (error) {
+      console.error("Error approving recommendation:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to approve recommendation",
+        error: error.message,
       });
-    } finally {
-      client.release();
     }
-  } catch (error) {
-    console.error("Error approving recommendation:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to approve recommendation",
-      error: error.message,
-    });
   }
-});
+);
 
 module.exports = router;
