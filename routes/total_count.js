@@ -152,7 +152,7 @@ router.get("/doctor-review", authenticateToken, async (req, res) => {
   }
 });
 
-router.get("/doctor-recent", async (req, res) => {
+router.get("/doctor-recent", authenticateToken, async (req, res) => {
   const doctorId = req.user.id;
   try {
     const { rows } = await pool.query(
