@@ -2,6 +2,7 @@
 // services/geminiService.js
 // import axios from "axios";
 const axios = require("axios");
+const https = require("https");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -13,13 +14,14 @@ async function generateRecommendation(prompt) {
   // const response = await result.response;
   // return response.text(); // This is your human-like AI recommendation
 
-  const apiUrl = 'https://c169c40dc8f6.ngrok-free.app';
+  const apiUrl = 'https://da956a79cc3c.ngrok-free.app';
+  const agent = new https.Agent({ rejectUnauthorized: false });
   
   try {
       
       console.log('Testing API with data:', prompt);
       
-      const response = await axios.post(`${apiUrl}/predict`, {prompt});
+      const response = await axios.post(`${apiUrl}/predict`, {prompt},{ httpsAgent: agent });
       
       console.log('API Response:');
       console.log('Recommendation:', response.data.recommendation);
