@@ -216,6 +216,8 @@ router.post(
       Eosinophile: 23,
       Monocyte: 24,
       "PLT Count": 25,
+      Basophile: 26,
+      Lymphocyte: 27,
     };
 
     const results = [];
