@@ -21,7 +21,7 @@ async function generateRecommendation(prompt) {
       
       console.log('Testing API with data:', prompt);
       
-      const response = await axios.post(`${apiUrl}/predict`, {prompt},{ httpsAgent: agent, timeout: 500000 });
+      const response = await axios.post(`${apiUrl}/predict`, {prompt},{ httpsAgent: agent, timeout: 300000 });
       
       console.log('API Response:');
       console.log('Recommendation:', response.data.recommendation);
