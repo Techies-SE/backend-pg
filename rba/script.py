@@ -371,6 +371,20 @@ def evaluate_liver_function(total_protein, globulin, albumin,
     g = gender.upper()
     res = {}
 
+     # ---------- Total Protein ----------
+    if total_protein < 6.0:
+        res["Total Protein"] = {
+            "classification": "low",
+            "recommendation": "อาจเกิดจากภาวะขาดสารอาหารหรือโรคตับ ควรปรึกษาแพทย์"
+        }
+    elif 6.0 <= total_protein <= 8.3:
+        res["Total Protein"] = {"classification": "normal", "recommendation": None}
+    else:
+        res["Total Protein"] = {
+            "classification": "high",
+            "recommendation": "อาจเกิดจากภาวะขาดน้ำหรือการอักเสบเรื้อรัง"
+        }
+
     # Globulin
     if 2.4 <= globulin <= 3.9:
         res["globulin"] = {"classification": "normal", "recommendation": None}
@@ -399,11 +413,27 @@ def evaluate_liver_function(total_protein, globulin, albumin,
         else {"classification": "high", "recommendation": "Possible liver/bone disorder"}
     )
 
-    # Bilirubin
-    if total_bilirubin <= 1.2 and direct_bilirubin <= 0.3:
-        res["bilirubin"] = {"classification": "normal", "recommendation": None}
+     # ---------- Total Bilirubin ----------
+    if total_bilirubin < 0.1:
+        res["Total Bilirubin"] = {"classification": "low", "recommendation": "อาจเกิดจากภาวะขาดสารอาหาร"}
+    elif 0.1 <= total_bilirubin <= 1.2:
+        res["Total Bilirubin"] = {"classification": "normal", "recommendation": None}
     else:
-        res["bilirubin"] = {"classification": "high", "recommendation": "Consult a doctor."}
+        res["Total Bilirubin"] = {
+            "classification": "high",
+            "recommendation": "อาจเกิดจากโรคตับหรือท่อน้ำดีอุดตัน ควรปรึกษาแพทย์"
+        }
+
+    # ---------- Direct Bilirubin ----------
+    if direct_bilirubin < 0.0:
+        res["Direct Bilirubin"] = {"classification": "low", "recommendation": None}
+    elif 0.0 <= direct_bilirubin <= 0.3:
+        res["Direct Bilirubin"] = {"classification": "normal", "recommendation": None}
+    else:
+        res["Direct Bilirubin"] = {
+            "classification": "high",
+            "recommendation": "อาจเกิดจากตับอักเสบหรือท่อน้ำดีอุดตัน ควรปรึกษาแพทย์"
+        }
 
     return res
 
@@ -474,6 +504,24 @@ def evaluate_cbc(hct, mcv, wbc, neutrophile, eosinophile,
         res["WBC"] = {"classification": "high", "recommendation": "อาจเกิดจากการติดเชื้อ"}
     else:
         res["WBC"] = {"classification": "very high", "recommendation": "ควรปรึกษาแพทย์โดยด่วน"}
+    
+     # ---------------------- Neutrophile ----------------------
+    # neutrophile is % of WBC
+    anc = wbc * neutrophile / 100.0  # absolute neutrophil count
+    if anc < 1000:
+        res["Neutrophile"] = {"classification": "dangerously low",
+                              "recommendation": "เสี่ยงต่อการติดเชื้อรุนแรง ควรพบแพทย์ทันที"}
+    elif 1000 <= anc < 1500:
+        res["Neutrophile"] = {"classification": "low",
+                              "recommendation": "อาจเกิดจากการกดไขกระดูก/การติดเชื้อไวรัส"}
+    elif 1500 <= anc <= 8000 and 40 <= neutrophile <= 60:
+        res["Neutrophile"] = {"classification": "normal", "recommendation": None}
+    elif 8000 < anc <= 20000:
+        res["Neutrophile"] = {"classification": "high",
+                              "recommendation": "อาจเกิดจากการติดเชื้อแบคทีเรียหรือการอักเสบ"}
+    else:  # anc > 20000 or extreme %
+        res["Neutrophile"] = {"classification": "very high",
+                              "recommendation": "ควรปรึกษาแพทย์เพื่อตรวจหาสาเหตุ เช่น การติดเชื้อรุนแรงหรือมะเร็งเม็ดเลือด"}
 
     # Eosinophile
     eos_count = wbc * eosinophile / 100
