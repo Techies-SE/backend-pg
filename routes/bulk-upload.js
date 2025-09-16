@@ -412,25 +412,48 @@ router.post(
             );
 
             // Update statuses in database
+            // for (const item of itemsRes.rows) {
+            //   if (item.lab_item_name === "Gender") continue;
+
+            //   // Handle different key formats
+            //   const possibleKeys = [
+            //     item.lab_item_name.toLowerCase().replace(/\s+/g, "_"),
+            //     item.lab_item_name.toLowerCase(),
+            //     item.lab_item_name,
+            //     item.lab_item_name.replace(/\s+/g, ""),
+            //   ];
+
+            //   let status = "unknown";
+            //   for (const key of possibleKeys) {
+            //     if (statuses[key] && statuses[key].classification) {
+            //       status = statuses[key].classification;
+            //       break;
+            //     }
+            //   }
+
+            //   await client.query(
+            //     `UPDATE lab_results SET lab_item_status = $1
+            //      WHERE lab_test_id = $2 AND lab_item_id = (
+            //        SELECT id FROM lab_items WHERE lab_item_name = $3
+            //      )`,
+            //     [status, test.lab_test_id, item.lab_item_name]
+            //   );
+            // }
+            const normalize = (name) =>
+              name.toLowerCase().replace(/\s+/g, "").replace("_", "");
             for (const item of itemsRes.rows) {
+              // Skip Gender
               if (item.lab_item_name === "Gender") continue;
 
-              // Handle different key formats
-              const possibleKeys = [
-                item.lab_item_name.toLowerCase().replace(/\s+/g, "_"),
-                item.lab_item_name.toLowerCase(),
-                item.lab_item_name,
-                item.lab_item_name.replace(/\s+/g, ""),
-              ];
-
               let status = "unknown";
-              for (const key of possibleKeys) {
+              for (const key in statuses) {
                 if (statuses[key] && statuses[key].classification) {
-                  status = statuses[key].classification;
-                  break;
+                  if (normalize(key) === normalize(item.lab_item_name)) {
+                    status = statuses[key].classification;
+                    break;
+                  }
                 }
               }
-
               await client.query(
                 `UPDATE lab_results SET lab_item_status = $1 
                  WHERE lab_test_id = $2 AND lab_item_id = (
