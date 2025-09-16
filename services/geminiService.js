@@ -13,13 +13,13 @@ async function generateRecommendation(prompt) {
   // const response = await result.response;
   // return response.text(); // This is your human-like AI recommendation
 
-  const apiUrl = 'http://127.0.0.1:6000';
+  const apiUrl = 'https://e12542405cf6.ngrok-free.app';
   
   try {
       
       console.log('Testing API with data:', prompt);
       
-      const response = await axios.post(`${apiUrl}/predict`, prompt);
+      const response = await axios.post(`${apiUrl}/predict`, {prompt});
       
       console.log('API Response:');
       console.log('Recommendation:', response.data.recommendation);
