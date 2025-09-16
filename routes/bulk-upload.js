@@ -455,7 +455,7 @@ router.post(
                 }
               }
               await client.query(
-                `UPDATE lab_results SET lab_item_status = $1 
+                `UPDATE lab_results SET lab_item_status = $1
                  WHERE lab_test_id = $2 AND lab_item_id = (
                    SELECT id FROM lab_items WHERE lab_item_name = $3
                  )`,
