@@ -13,7 +13,7 @@ async function generateRecommendation(prompt) {
   // const response = await result.response;
   // return response.text(); // This is your human-like AI recommendation
 
-  const apiUrl = 'https://2a7397a04a97.ngrok-free.app';
+  const apiUrl = 'https://c169c40dc8f6.ngrok-free.app';
   
   try {
       
