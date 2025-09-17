@@ -81,7 +81,5 @@ module.exports.createRecommendationPrompt = async function (
   return `
 Patient data:
 ${itemsDescription}
-Based on this lab-test data, provide a doctor's recommendation in English without exceeding 100 words and not less than 50 words.
-Do not include explanation, notes, or disclaimers. Only the recommendation.
-`.trim();
+Based on this lab-test data, provide a doctor's recommendation in English without exceeding 100 words.Do not include explanation, notes, or disclaimers. Only the recommendation.`.trim();
 };

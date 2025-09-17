@@ -14,21 +14,19 @@ async function generateRecommendation(prompt) {
   // const response = await result.response;
   // return response.text(); // This is your human-like AI recommendation
 
-  const apiUrl = 'https://da956a79cc3c.ngrok-free.app';
-  const agent = new https.Agent({ rejectUnauthorized: false });
+  const apiUrl = 'https://bd97e374d72b.ngrok-free.app'; // Correct ngrok URL
   
   try {
-      
       console.log('Testing API with data:', prompt);
       
-      const response = await axios.post(`${apiUrl}/predict`, {prompt},{ httpsAgent: agent, timeout: 300000 });
+      const response = await axios.post(`${apiUrl}/predict`, { prompt });
       
-      console.log('API Response:');
-      console.log('Recommendation:', response.data.recommendation);
+      console.log('API Response:', response.data.recommendation);
       return response.data.recommendation;
       
   } catch (error) {
       console.error('Error:', error.response?.data || error.message);
+      return null; // prevent null DB inserts
   }
 
 }
