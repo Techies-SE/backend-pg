@@ -29,7 +29,6 @@ async function generateRecommendation(prompt) {
       { prompt },
       {
         httpsAgent: agent, // Use the custom agent
-        timeout: 240000, // Increase timeout
       }
     );
 
