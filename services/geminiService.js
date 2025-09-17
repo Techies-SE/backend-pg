@@ -19,7 +19,7 @@ async function generateRecommendation(prompt) {
   // const response = await result.response;
   // return response.text(); // This is your human-like AI recommendation
 
-  const apiUrl = "https://bd97e374d72b.ngrok-free.app"; // Correct ngrok URL
+  const apiUrl = "https://731f3b469fe5.ngrok-free.app"; // Correct ngrok URL
 
   try {
     console.log("Testing API with data:", prompt);
