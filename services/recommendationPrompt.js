@@ -47,39 +47,18 @@
 //   `.trim();
 // };
 
-module.exports.createRecommendationPrompt = async function (
-  patientName,
-  labItems
-) {
+module.exports.createRecommendationPrompt = function (labItems) {
   console.log("Lab Items passed to prompt:", labItems);
 
-  // Group lab items by test type for better organization
-  const groupedByTest = {};
+  const inputData = {};
+
   labItems.forEach((item) => {
-    const testName = item.lab_test_name || "General Lab";
-    if (!groupedByTest[testName]) {
-      groupedByTest[testName] = [];
+    // Use the lab item name as the key and its value as the value
+    if (item.lab_item_name && item.lab_item_value !== undefined) {
+      inputData[item.lab_item_name] = Number(item.lab_item_value);
     }
-    groupedByTest[testName].push(item);
   });
 
-  // Create organized description
-  let itemsDescription = "";
-  Object.keys(groupedByTest).forEach((testName) => {
-    itemsDescription += `${testName}:\n`;
-    groupedByTest[testName].forEach((item) => {
-      const statusText =
-        item.lab_item_status === "unknown" || item.lab_item_status === null
-          ? "Status is unknown"
-          : `Status: ${item.lab_item_status}`;
-      itemsDescription += `${item.lab_item_name} : ${item.lab_item_value} ${
-        item.unit || ""
-      } (${statusText})\n`;
-    });
-  });
-
-  return `
-Patient data:
-${itemsDescription}
-Based on this lab-test data, provide a doctor's recommendation in English without exceeding 100 words.Do not include explanation, notes, or disclaimers. Only the recommendation.`.trim();
+  return inputData;
 };
+

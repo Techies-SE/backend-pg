@@ -4,49 +4,70 @@
 const axios = require("axios");
 const https = require("https");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fs = require("fs");
 
-// Create an agent that ignores SSL errors
-const agent = new https.Agent({
-  rejectUnauthorized: false,
-});
+const artifacts = {
+  blood_pressure: JSON.parse(
+    fs.readFileSync("../models/blood_pressure_artifacts.json")
+  ),
+};
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-async function generateRecommendation(prompt) {
-  // const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+// async function generateRecommendation(prompt) {
+//   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-  // const result = await model.generateContent(prompt);
-  // const response = await result.response;
-  // return response.text(); // This is your human-like AI recommendation
+//   const result = await model.generateContent(prompt);
+//   const response = await result.response;
+//   return response.text(); // This is your human-like AI recommendation
 
-  const apiUrl = "https://731f3b469fe5.ngrok-free.app"; // Correct ngrok URL
+// }
 
-  try {
-    console.log("Testing API with data:", prompt);
-
-    const response = await axios.post(
-      `${apiUrl}/predict`,
-      { prompt },
-      {
-        httpsAgent: agent, // Use the custom agent
-      }
-    );
-
-    console.log("API Response:", response.data.recommendation);
-    const recommendation = response.data.recommendation;
-
-    // Validate that we actually got a recommendation
-    if (!recommendation || recommendation.trim() === "") {
-      console.warn("Empty recommendation received");
-      return "Unable to generate recommendation at this time. Please try again.";
+function predictLabs(input) {
+  const results = {};
+  const recommendations = [];
+  for (const [testName, artifact] of Object.entries(artifacts)) {
+    const hasAll = artifact.features.every((f) => f in input);
+    if (hasAll) {
+      const prediction = predict(artifact, input);
+      results[testName] = prediction;
+      recommendations.push(prediction);
     }
-
-    console.log("API Response:", recommendation);
-    return recommendation;
-  } catch (error) {
-    console.error("Error:", error.response?.data || error.message);
-    return "Unable to generate recommendation at this time. Please try again."; // prevent null DB inserts
   }
+  if (Object.keys(results).length === 0) {
+    throw new Error("No matching lab test found for the given input.");
+  }
+  // return {
+  //   details: results,
+  //   combined: recommendations.join(""),
+  // };
+  return recommendations.join("");
 }
 
-module.exports = { generateRecommendation };
+function predict(artifact, inputFeatures) {
+  const features = artifact.features;
+  let x = features.map((fname, i) => {
+    const val =
+      inputFeatures[fname] === undefined || inputFeatures[fname] === null
+        ? artifact.imputer_median[i]
+        : inputFeatures[fname];
+    return Number(val);
+  });
+
+  x = x.map((v, i) => (v - artifact.scaler_mean[i]) / artifact.scaler_std[i]);
+
+  const scores = artifact.coef.map((coefRow, clsIdx) => {
+    return coefRow.reduce(
+      (acc, c, j) => acc + c * x[j],
+      artifact.intercept[clsIdx] || 0
+    );
+  });
+
+  const probs = softmanx(scores);
+
+  const bestIdx = probs.indexOf(Math.max(...probs));
+  return artifact.classes[bestIdx];
+}
+
+// module.exports = { generateRecommendation };
+module.exports = { predictLabs };

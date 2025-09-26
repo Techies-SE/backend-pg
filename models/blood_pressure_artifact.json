@@ -1,0 +1,43 @@
+{
+  "model_type": "logreg",
+  "features": [
+    "Systolic",
+    "Diastolic"
+  ],
+  "classes": [
+    "Abnormal blood pressure detected. Medical consultation is advised.",
+    "Blood pressure is within normal limits.",
+    "Critical blood pressure detected. Seek immediate medical attention."
+  ],
+  "coef": [
+    [
+      1.0083047517599248,
+      0.5222209255887743
+    ],
+    [
+      -6.506141222329632,
+      -1.8258450340620878
+    ],
+    [
+      5.497836470569705,
+      1.303624108473311
+    ]
+  ],
+  "intercept": [
+    3.4197787206347376,
+    7.25667789930349,
+    -10.676456619938111
+  ],
+  "imputer_median": [
+    129.0,
+    77.0
+  ],
+  "scaler_mean": [
+    130.12249692359325,
+    78.22653540664504
+  ],
+  "scaler_scale": [
+    17.822077692566026,
+    12.515542483133245
+  ]
+}

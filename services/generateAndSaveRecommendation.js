@@ -1,5 +1,5 @@
 const { pool } = require("../db.js");
-const { generateRecommendation } = require("./geminiService.js");
+const { predictLabs } = require("./geminiService.js");
 const { createRecommendationPrompt } = require("./recommendationPrompt.js");
 
 module.exports.generateAndSaveRecommendation = async function (lab_test_id) {
@@ -49,7 +49,7 @@ module.exports.generateAndSaveRecommendation = async function (lab_test_id) {
     );
 
     // Step 2: Generate recommendation
-    const aiRecommendation = await generateRecommendation(prompt);
+    const aiRecommendation = await predictLabs(prompt);
 
     // Step 3: Save to recommendations table with doctor_id
     await pool.query(
