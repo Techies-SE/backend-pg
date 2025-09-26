@@ -8,6 +8,14 @@ const fs = require("fs");
 const path = require("path");
 
 
+//softmax
+function softmax(arr) {
+    const max = Math.max(...arr);
+    const exps = arr.map((x) => Math.exp(x - max));
+    const sum = exps.reduce((a, b) => a + b, 0);
+    return exps.map((e) => e / sum);
+}
+
 // Absolute path to the models directory
 const modelsDir = path.join(__dirname, "..", "models");
 
@@ -72,7 +80,7 @@ function predict(artifact, inputFeatures) {
     );
   });
 
-  const probs = softmanx(scores);
+  const probs = softmax(scores);
 
   const bestIdx = probs.indexOf(Math.max(...probs));
   return artifact.classes[bestIdx];
