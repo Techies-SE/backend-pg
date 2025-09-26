@@ -329,25 +329,25 @@ const generateAndSaveRecommendationByDate = async function (
     }
 
     // Transform gender values
-    const transformedLabData = labData.map((item) => {
-      if (
-        item.lab_item_name.toLowerCase() === "gender" &&
-        item.lab_item_value !== null
-      ) {
-        return {
-          ...item,
-          lab_item_value:
-            String(item.lab_item_value) === "0" ? "Male" : "Female",
-          lab_item_status: null,
-        };
-      }
-      return item;
-    });
+    // const transformedLabData = labData.map((item) => {
+    //   if (
+    //     item.lab_item_name.toLowerCase() === "gender" &&
+    //     item.lab_item_value !== null
+    //   ) {
+    //     return {
+    //       ...item,
+    //       lab_item_value:
+    //         String(item.lab_item_value) === "0" ? "Male" : "Female",
+    //       lab_item_status: null,
+    //     };
+    //   }
+    //   return item;
+    // });
 
     // Create prompt with grouped data
     const prompt = createRecommendationPrompt(
       patientName,
-      transformedLabData
+      labData
     );
 
     // Generate recommendation

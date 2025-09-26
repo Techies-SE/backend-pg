@@ -134,25 +134,25 @@ const generateAndSaveRecommendationByDate = async function (
     }
 
     // Transform gender values from 0/1 to Male/Female for the prompt
-    const transformedLabData = labData.map((item) => {
-      if (
-        item.lab_item_name.toLowerCase() === "gender" &&
-        item.lab_item_value !== null
-      ) {
-        return {
-          ...item,
-          lab_item_value:
-            String(item.lab_item_value) === "0" ? "Male" : "Female",
-          lab_item_status: null,
-        };
-      }
-      return item;
-    });
+    // const transformedLabData = labData.map((item) => {
+    //   if (
+    //     item.lab_item_name.toLowerCase() === "gender" &&
+    //     item.lab_item_value !== null
+    //   ) {
+    //     return {
+    //       ...item,
+    //       lab_item_value:
+    //         String(item.lab_item_value) === "0" ? "Male" : "Female",
+    //       lab_item_status: null,
+    //     };
+    //   }
+    //   return item;
+    // });
 
     // Create prompt with grouped data
     const prompt = createRecommendationPrompt(
       patientName,
-      transformedLabData
+      labData
     );
 
     // Generate recommendation
