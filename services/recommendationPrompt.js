@@ -58,6 +58,6 @@ module.exports.createRecommendationPrompt = function (patientName, labItems) {
       inputData[item.lab_item_name] = Number(item.lab_item_value);
     }
   });
-
+  print('inputData:', inputData);
   return inputData;
 };

@@ -63,7 +63,7 @@ function predict(artifact, inputFeatures) {
     return Number(val);
   });
 
-  x = x.map((v, i) => (v - artifact.scaler_mean[i]) / artifact.scaler_std[i]);
+  x = x.map((v, i) => (v - artifact.scaler_mean[i]) / artifact.scaler_scale[i]);
 
   const scores = artifact.coef.map((coefRow, clsIdx) => {
     return coefRow.reduce(
