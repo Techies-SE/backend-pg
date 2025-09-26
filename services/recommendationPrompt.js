@@ -47,7 +47,7 @@
 //   `.trim();
 // };
 
-module.exports.createRecommendationPrompt = function (labItems) {
+module.exports.createRecommendationPrompt = function (patientName, labItems) {
   console.log("Lab Items passed to prompt:", labItems);
 
   const inputData = {};
@@ -61,4 +61,3 @@ module.exports.createRecommendationPrompt = function (labItems) {
 
   return inputData;
 };
-
