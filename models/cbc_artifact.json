@@ -13,8 +13,8 @@
     "WBC"
   ],
   "classes": [
-    "Abnormal values detected. Medical consultation is advised.",
-    "Critical abnormalities detected. Immediate medical attention is required."
+    "Abnormal values detected for CBC and  Medical consultation is advised.",
+    "Critical abnormalities detected for CBC and Immediate medical attention is required."
   ],
   "coef": [
     [
