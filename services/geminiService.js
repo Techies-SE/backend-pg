@@ -6,9 +6,10 @@ const https = require("https");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs");
 
+
 const artifacts = {
   blood_pressure: JSON.parse(
-    fs.readFileSync("../models/blood_pressure_artifact.json")
+    fs.readFileSync("../models/blood_pressure_artifact.json", "utf8")
   ),
 };
 
