@@ -1,0 +1,32 @@
+{
+  "model_type": "logreg",
+  "features": [
+    "Gender",
+    "UricAcid"
+  ],
+  "classes": [
+    "Consult a doctor for elevated uric acid levels",
+    "Uric acid levels are within normal range"
+  ],
+  "coef": [
+    [
+      -4.290481864189246,
+      -13.400652033665176
+    ]
+  ],
+  "intercept": [
+    5.521568836740077
+  ],
+  "imputer_median": [
+    1.0,
+    5.7
+  ],
+  "scaler_mean": [
+    0.5802182639237331,
+    5.839757902659308
+  ],
+  "scaler_scale": [
+    0.4935230796356562,
+    1.5338398851805928
+  ]
+}

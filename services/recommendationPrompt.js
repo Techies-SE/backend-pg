@@ -48,14 +48,22 @@
 // };
 
 module.exports.createRecommendationPrompt = function (patientName, labItems) {
+  const FEATURE_NAME_MAP = {
+  "Uric Acid": "UricAcid",
+  "Systolic": "Systolic",
+  "Diastolic": "Diastolic",
+  "Gender" : "Gender"
+};
+
   console.log("Lab Items passed to prompt:", labItems);
 
   const inputData = {};
 
   labItems.forEach((item) => {
-    // Use the lab item name as the key and its value as the value
     if (item.lab_item_name && item.lab_item_value !== undefined) {
-      inputData[item.lab_item_name] = Number(item.lab_item_value);
+      const rawName = item.lab_item_name.trim();
+      const modelName = FEATURE_NAME_MAP[rawName] || rawName.replace(/\s+/g, "");
+      inputData[modelName] = Number(item.lab_item_value);
     }
   });
   console.log('inputData:', inputData);;
