@@ -5,13 +5,21 @@ const axios = require("axios");
 const https = require("https");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs");
+const path = require("path");
 
 
-const artifacts = {
-  blood_pressure: JSON.parse(
-    fs.readFileSync("../models/blood_pressure_artifact.json", "utf8")
-  ),
-};
+// Absolute path to the models directory
+const modelsDir = path.join(__dirname, "..", "models");
+
+// Read every *.json file and parse it
+const artifacts = {};
+for (const file of fs.readdirSync(modelsDir)) {
+  if (file.endsWith(".json")) {
+    const name = path.basename(file, ".json"); // e.g. "blood_pressure_artifact"
+    const filePath = path.join(modelsDir, file);
+    artifacts[name] = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  }
+}
 
 // const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
