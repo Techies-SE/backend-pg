@@ -1,0 +1,50 @@
+{
+  "model_type": "logreg",
+  "features": [
+    "Gender",
+    "Creatinine",
+    "eGFR"
+  ],
+  "classes": [
+    "Kidney function is moderately to severely reduced. Consult a doctor for further evaluation.",
+    "Kidney function is severely impaired. Seek medical advice immediately.",
+    "Kidney function is within normal or mildly reduced range. Monitor regularly."
+  ],
+  "coef": [
+    [
+      0.590458930011166,
+      0.09900302156967447,
+      -0.793688851972759
+    ],
+    [
+      2.6589521166979946,
+      9.863683840856176,
+      -0.9454704878548045
+    ],
+    [
+      -3.2494110467091555,
+      -9.962686862425858,
+      1.7391593398275729
+    ]
+  ],
+  "intercept": [
+    -3.8849612453612483,
+    -5.410550980719566,
+    9.295512226080879
+  ],
+  "imputer_median": [
+    1.0,
+    0.81,
+    96.0
+  ],
+  "scaler_mean": [
+    0.5727501717426151,
+    0.8565234714907258,
+    94.76615067552096
+  ],
+  "scaler_scale": [
+    0.49467910054036046,
+    0.3477913561608977,
+    17.472494805858435
+  ]
+}

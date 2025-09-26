@@ -52,7 +52,8 @@ module.exports.createRecommendationPrompt = function (patientName, labItems) {
   "Uric Acid": "UricAcid",
   "Systolic": "Systolic",
   "Diastolic": "Diastolic",
-  "Gender" : "Gender"
+  "Gender" : "Gender",
+  "PLT Count": "PLTCount",
 };
 
   console.log("Lab Items passed to prompt:", labItems);
