@@ -43,13 +43,13 @@ module.exports.generateAndSaveRecommendation = async function (lab_test_id) {
       return item;
     });
 
-    const prompt = await createRecommendationPrompt(
+    const prompt = createRecommendationPrompt(
       patientName,
       transformedLabData
     );
 
     // Step 2: Generate recommendation
-    const aiRecommendation = await predictLabs(prompt);
+    const aiRecommendation = predictLabs(prompt);
 
     // Step 3: Save to recommendations table with doctor_id
     await pool.query(

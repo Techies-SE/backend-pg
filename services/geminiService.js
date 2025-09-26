@@ -8,7 +8,7 @@ const fs = require("fs");
 
 const artifacts = {
   blood_pressure: JSON.parse(
-    fs.readFileSync("../models/blood_pressure_artifacts.json")
+    fs.readFileSync("../models/blood_pressure_artifact.json")
   ),
 };
 
