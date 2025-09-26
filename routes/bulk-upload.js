@@ -13,7 +13,7 @@ const pythonScriptPath = path.join(__dirname, "../rba/script.py");
 const {
   createRecommendationPrompt,
 } = require("../services/recommendationPrompt.js");
-const { generateRecommendation } = require("../services/geminiService.js");
+const { predictLabs } = require("../services/geminiService.js");
 const authenticateToken = require("../middleware/auth");
 const TEST_REQUIREMENTS = {
   1: ["Systolic", "Diastolic"], // Blood Pressure
@@ -150,13 +150,13 @@ const generateAndSaveRecommendationByDate = async function (
     });
 
     // Create prompt with grouped data
-    const prompt = await createRecommendationPrompt(
+    const prompt = createRecommendationPrompt(
       patientName,
       transformedLabData
     );
 
     // Generate recommendation
-    const aiRecommendation = await generateRecommendation(prompt);
+    const aiRecommendation = predictLabs(prompt);
 
     // Save recommendation with date grouping
     await pool.query(
