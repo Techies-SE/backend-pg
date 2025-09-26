@@ -54,6 +54,9 @@ module.exports.createRecommendationPrompt = function (patientName, labItems) {
   "Diastolic": "Diastolic",
   "Gender" : "Gender",
   "PLT Count": "PLTCount",
+  "Total Bilirubin": "TotalBilirubin",
+  "Direct Bilirubin": "DirectBilirubin",
+  "Total Protein": "TotalProtein"
 };
 
   console.log("Lab Items passed to prompt:", labItems);
