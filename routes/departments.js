@@ -6,7 +6,7 @@ const { pool } = require("../db");
 const fs = require("fs");
 const authenticateToken = require("../middleware/auth");
 const cloudinary = require("../cloudinary");
-const upload = require('../middleware/upload_image');
+const upload = require("../middleware/upload_image");
 
 // Multer config
 const storage = multer.diskStorage({
@@ -133,38 +133,74 @@ router.get("/id=:id", async (req, res) => {
 });
 
 // PATCH route for department image upload
+// router.patch(
+//   "/image/upload/:id",
+//   upload.single("image"),
+//   authenticateToken,
+//   async (req, res) => {
+//     const departmentId = req.params.id;
+
+//     if (!req.file) {
+//       return res.status(400).json({ error: "No image file uploaded" });
+//     }
+
+//     const imagePath = `uploads/${req.file.filename}`;
+//     const imageUrl = `http://localhost:3000/${imagePath}`;
+
+//     try {
+//       const { rowCount } = await pool.query(
+//         "UPDATE departments SET image = $1 WHERE id = $2",
+//         [imagePath, departmentId]
+//       );
+
+//       if (rowCount === 0) {
+//         return res.status(404).json({ error: "Department not found" });
+//       }
+
+//       res.json({
+//         message: "Department image updated",
+//         imagePath,
+//         imageUrl,
+//       });
+//     } catch (error) {
+//       console.error("Upload error:", error);
+//       res.status(500).json({ error: "Internal server error" });
+//     }
+//   }
+// );
 router.patch(
-  "/image/upload/:id",
-  upload.single("image"),
+  "/upload/:id",
+  upload.single("image"), // Cloudinary multer middleware
   authenticateToken,
   async (req, res) => {
     const departmentId = req.params.id;
 
     if (!req.file) {
-      return res.status(400).json({ error: "No image file uploaded" });
+      return res.status(400).json({ error: "No image file provided." });
     }
 
-    const imagePath = `uploads/${req.file.filename}`;
-    const imageUrl = `http://localhost:3000/${imagePath}`;
+    // Cloudinary gives you the hosted URL
+    const imageUrl = req.file.path; // Full Cloudinary URL
+    const publicId = req.file.filename; // Cloudinary public_id
 
     try {
       const { rowCount } = await pool.query(
-        "UPDATE departments SET image = $1 WHERE id = $2",
-        [imagePath, departmentId]
+        "UPDATE departments SET image = $1, updated_at = NOW() WHERE id = $2",
+        [imageUrl, departmentId]
       );
 
-      if (rowCount === 0) {
+      if (!rowCount) {
         return res.status(404).json({ error: "Department not found" });
       }
 
       res.json({
-        message: "Department image updated",
-        imagePath,
+        message: "Department image updated successfully",
         imageUrl,
+        publicId,
       });
-    } catch (error) {
-      console.error("Upload error:", error);
-      res.status(500).json({ error: "Internal server error" });
+    } catch (err) {
+      console.error("Error updating department image:", err);
+      res.status(500).json({ error: "Failed to update image" });
     }
   }
 );
