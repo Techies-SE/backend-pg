@@ -5,6 +5,7 @@ const path = require("path");
 const { pool } = require("../db");
 const fs = require("fs");
 const authenticateToken = require("../middleware/auth");
+const cloudinary = require("../cloudinary");
 
 // Multer config
 const storage = multer.diskStorage({
@@ -22,36 +23,6 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Get all departments
-// router.get('/', authenticateToken, async (req, res) => {
-//   try {
-//     const { rows } = await pool.query('SELECT * FROM departments');
-//     res.json(rows);
-//   } catch (err) {
-//     console.error('Error fetching departments:', err);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
-// router.get("/", authenticateToken, async (req, res) => {
-//   try {
-//     // Get all departments
-//     const departmentsQuery = await pool.query("SELECT * FROM departments");
-//     const departments = departmentsQuery.rows;
-
-//     // // Get all doctors grouped by department
-//     const doctorsQuery = await pool.query(`
-//       SELECT d.*, json_agg(doctors.*) as doctors
-//       FROM departments d
-//       LEFT JOIN doctors ON doctors.department_id = d.id
-//       GROUP BY d.id
-//     `);
-
-//     res.json(doctorsQuery.rows);
-//   } catch (err) {
-//     console.error("Error fetching departments with doctors:", err);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
 router.get("/", authenticateToken, async (req, res) => {
   try {
     // Get all departments
@@ -243,16 +214,17 @@ router.post(
   authenticateToken,
   async (req, res) => {
     const { name, description } = req.body;
-    let imagePath = null;
+    let imageUrl = null;
 
-    if (req.file) {
-      imagePath = `uploads/${req.file.filename}`;
+    // Cloudinary image is available in req.file.path
+    if (req.file && req.file.path) {
+      imageUrl = req.file.path; // Cloudinary returns the hosted image URL here
     }
 
     try {
       const { rows } = await pool.query(
         "INSERT INTO departments (name, description, image) VALUES ($1, $2, $3) RETURNING *",
-        [name, description || null, imagePath]
+        [name, description || null, imageUrl]
       );
 
       res.status(201).json({
@@ -261,9 +233,7 @@ router.post(
           id: rows[0].id,
           name: rows[0].name,
           description: rows[0].description || null,
-          image: rows[0].image
-            ? `http://localhost:3000/${rows[0].image}`
-            : null,
+          image: rows[0].image || null, // already a Cloudinary URL
         },
       });
     } catch (err) {
@@ -318,8 +288,6 @@ router.get("/:id", authenticateToken, async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ message: "Department not found" });
     }
-
-    
 
     const department = {
       id: rows[0].department_id,
