@@ -169,7 +169,8 @@ router.get("/doctor-recent", authenticateToken, async (req, res) => {
         ON lt.patient_id = p.id
         WHERE lt.doctor_id = $1
         GROUP BY p.id, p.hn_number, p.name, lt.lab_test_date
-        ORDER BY lt.lab_test_date DESC;
+        ORDER BY lt.lab_test_date DESC
+        limit 10;
       `,
       [doctorId]
     );
