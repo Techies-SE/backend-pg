@@ -169,7 +169,7 @@ router.get("/id=:id", async (req, res) => {
 //   }
 // );
 router.patch(
-  "/upload/:id",
+  "/image/upload/:id",
   upload.single("image"), // Cloudinary multer middleware
   authenticateToken,
   async (req, res) => {
