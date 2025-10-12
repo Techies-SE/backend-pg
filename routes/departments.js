@@ -185,7 +185,7 @@ router.patch(
 
     try {
       const { rowCount } = await pool.query(
-        "UPDATE departments SET image = $1, updated_at = NOW() WHERE id = $2",
+        "UPDATE departments SET image = $1 WHERE id = $2",
         [imageUrl, departmentId]
       );
 
