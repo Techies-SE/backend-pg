@@ -6,6 +6,7 @@ const { pool } = require("../db");
 const fs = require("fs");
 const authenticateToken = require("../middleware/auth");
 const cloudinary = require("../cloudinary");
+const upload = require('../middleware/upload_image');
 
 // Multer config
 const storage = multer.diskStorage({
@@ -20,7 +21,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+//const upload = multer({ storage });
 
 // Get all departments
 router.get("/", authenticateToken, async (req, res) => {
