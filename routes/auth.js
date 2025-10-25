@@ -178,4 +178,64 @@ router.post("/doctors", async (req, res) => {
   }
 });
 
+//Doctor Password Change
+router.patch(
+  "/doctors/change-password",
+  authenticateToken,
+  async (req, res) => {
+    const userId = req.user.id;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    // 1️⃣ Validate input
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        error:
+          "Current password, new password, and confirm password are required",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res
+        .status(400)
+        .json({ error: "New password and confirm password do not match" });
+    }
+
+    try {
+      // 2️⃣ Fetch current hashed password
+      const { rows } = await pool.query(
+        "SELECT password FROM doctors WHERE id = $1",
+        [userId]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "Doctor not found" });
+      }
+
+      const user = rows[0];
+
+      // 3️⃣ Compare current password
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      // 4️⃣ Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // 5️⃣ Update password in DB
+      await pool.query("UPDATE doctors SET password = $1 WHERE id = $2", [
+        hashedPassword,
+        userId,
+      ]);
+
+      res
+        .status(200)
+        .json({ success: true, message: "Password updated successfully" });
+    } catch (err) {
+      console.error("Password change error:", err);
+      res.status(500).json({ error: "Database error" });
+    }
+  }
+);
+
 module.exports = router;
