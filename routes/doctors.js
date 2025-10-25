@@ -98,7 +98,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
     );
 
     const scheduleResults = await client.query(
-      `SELECT day_of_week, start_time, end_time
+      `SELECT id, day_of_week, start_time, end_time
        FROM doctor_schedules
        WHERE doctor_id = $1
        ORDER BY 
