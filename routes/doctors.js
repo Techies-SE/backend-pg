@@ -721,25 +721,31 @@ router.post("/schedules", authenticateToken, async (req, res) => {
 });
 
 // PATCH: doctor profile picture upload
-router.patch('/profile/upload', upload.single('image'), async (req, res) => {
-  const doctorId = req.user.id;
-  if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
+router.patch(
+  "/profile/upload",
+  authenticateToken,
+  upload.single("image"),
+  async (req, res) => {
+    const doctorId = req.user.id;
+    if (!req.file)
+      return res.status(400).json({ error: "No image file provided." });
 
-  const imageUrl = req.file.path;         // Cloudinary public URL
-  const publicId = req.file.filename;     // Cloudinary public_id
+    const imageUrl = req.file.path; // Cloudinary public URL
+    const publicId = req.file.filename; // Cloudinary public_id
 
-  try {
-    const { rowCount } = await pool.query(
-      'UPDATE doctors SET image = $1, updated_at = NOW() WHERE id = $2',
-      [imageUrl, doctorId]
-    );
-    if (!rowCount) return res.status(404).json({ error: 'Doctor not found' });
+    try {
+      const { rowCount } = await pool.query(
+        "UPDATE doctors SET image = $1, updated_at = NOW() WHERE id = $2",
+        [imageUrl, doctorId]
+      );
+      if (!rowCount) return res.status(404).json({ error: "Doctor not found" });
 
-    res.json({ message: 'Doctor profile image updated', imageUrl });
-  } catch (err) {
-    console.error('Error updating doctor image:', err);
-    res.status(500).json({ error: 'Failed to update image' });
+      res.json({ message: "Doctor profile image updated", imageUrl });
+    } catch (err) {
+      console.error("Error updating doctor image:", err);
+      res.status(500).json({ error: "Failed to update image" });
+    }
   }
-});
+);
 
 module.exports = router;
