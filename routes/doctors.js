@@ -4,6 +4,7 @@ const { pool } = require("../db"); // Now using pg pool
 const bcrypt = require("bcrypt");
 const authenticateToken = require("../middleware/auth");
 require("dotenv").config();
+const upload = require("../middleware/upload_image");
 
 // router.get("/recent-lab-tests", authenticateToken, async (req, res) => {
 //   try {
@@ -673,14 +674,14 @@ router.delete("/schedules/:id", authenticateToken, async (req, res) => {
 
 // POST: Add a new schedule for the logged-in doctor
 router.post("/schedules", authenticateToken, async (req, res) => {
-  
-
   const doctorId = req.user.id;
   const { day_of_week, start_time, end_time } = req.body;
 
   // Validate input
   if (!day_of_week || !start_time || !end_time) {
-    return res.status(400).json({ error: "day_of_week, start_time, and end_time are required" });
+    return res
+      .status(400)
+      .json({ error: "day_of_week, start_time, and end_time are required" });
   }
 
   let client;
@@ -719,5 +720,45 @@ router.post("/schedules", authenticateToken, async (req, res) => {
   }
 });
 
+// PATCH: doctor profile picture upload
+// Doctor uploads/updates profile picture
+router.patch(
+  "/upload-profile",
+  authenticateToken,
+  upload.single("image"),
+  async (req, res) => {
+    const doctorId = req.user.id;
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file provided." });
+    }
+
+    const imageUrl = req.file.path; // Cloudinary URL
+    const publicId = req.file.filename; // Cloudinary public_id (if needed for future deletions)
+
+    try {
+      const { rowCount } = await pool.query(
+        `
+        UPDATE doctors
+        SET image = $1, updated_at = NOW()
+        WHERE id = $2
+        RETURNING id, name, email, image;
+        `,
+        [imageUrl, doctorId]
+      );
+
+      if (!rowCount) {
+        return res.status(404).json({ error: "Doctor not found" });
+      }
+
+      res.status(200).json({
+        message: "Doctor profile image updated successfully",
+        imageUrl,
+      });
+    } catch (err) {
+      console.error("Error updating doctor image:", err);
+      res.status(500).json({ error: "Database error while updating image" });
+    }
+  }
+);
 
 module.exports = router;
