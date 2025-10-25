@@ -671,4 +671,53 @@ router.delete("/schedules/:id", authenticateToken, async (req, res) => {
   }
 });
 
+// POST: Add a new schedule for the logged-in doctor
+router.post("/schedules", authenticateToken, async (req, res) => {
+  
+
+  const doctorId = req.user.id;
+  const { day_of_week, start_time, end_time } = req.body;
+
+  // Validate input
+  if (!day_of_week || !start_time || !end_time) {
+    return res.status(400).json({ error: "day_of_week, start_time, and end_time are required" });
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+
+    // Optional: check for duplicate schedule (same day & time)
+    const duplicateCheck = await client.query(
+      `SELECT id 
+       FROM doctor_schedules 
+       WHERE doctor_id = $1 AND day_of_week = $2 AND start_time = $3 AND end_time = $4`,
+      [doctorId, day_of_week, start_time, end_time]
+    );
+
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(400).json({ error: "This schedule already exists" });
+    }
+
+    // Insert new schedule
+    const insertResult = await client.query(
+      `INSERT INTO doctor_schedules (doctor_id, day_of_week, start_time, end_time)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *;`,
+      [doctorId, day_of_week, start_time, end_time]
+    );
+
+    res.status(201).json({
+      message: "Schedule added successfully",
+      schedule: insertResult.rows[0],
+    });
+  } catch (err) {
+    console.error("Add schedule error:", err);
+    res.status(500).json({ error: "Database error while adding schedule" });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+
 module.exports = router;
