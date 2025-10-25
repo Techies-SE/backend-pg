@@ -97,6 +97,25 @@ router.get("/profile", authenticateToken, async (req, res) => {
       [doctorId]
     );
 
+    const scheduleResults = await client.query(
+      `SELECT day_of_week, start_time, end_time
+       FROM doctor_schedules
+       WHERE doctor_id = $1
+       ORDER BY 
+         CASE 
+           WHEN day_of_week = 'Monday' THEN 1
+           WHEN day_of_week = 'Tuesday' THEN 2
+           WHEN day_of_week = 'Wednesday' THEN 3
+           WHEN day_of_week = 'Thursday' THEN 4
+           WHEN day_of_week = 'Friday' THEN 5
+           WHEN day_of_week = 'Saturday' THEN 6
+           WHEN day_of_week = 'Sunday' THEN 7
+           ELSE 8
+         END,
+         start_time`,
+      [doctorId]
+    );
+
     res.json({
       message: "Doctor profile retrieved successfully",
       doctor: {
@@ -107,6 +126,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
           completed_appointments:
             appointmentStats.rows[0]?.completed_appointments || 0,
         },
+        schedules: scheduleResults.rows,
       },
     });
   } catch (err) {
