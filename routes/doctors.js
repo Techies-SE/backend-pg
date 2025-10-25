@@ -568,4 +568,107 @@ router.get("/:id/details", async (req, res) => {
   }
 });
 
+// PATCH: Update doctor's schedule (partial update)
+router.patch("/schedules/:id", authenticateToken, async (req, res) => {
+  const doctorId = req.user.id;
+  const scheduleId = req.params.id;
+  const { day_of_week, start_time, end_time } = req.body;
+
+  // Ensure at least one field is provided
+  if (!day_of_week && !start_time && !end_time) {
+    return res.status(400).json({ error: "No fields provided to update" });
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+
+    // Check that schedule belongs to this doctor
+    const check = await client.query(
+      `SELECT id FROM doctor_schedules WHERE id = $1 AND doctor_id = $2`,
+      [scheduleId, doctorId]
+    );
+
+    if (check.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "Schedule not found or unauthorized" });
+    }
+
+    // Build dynamic SQL query for partial updates
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (day_of_week) {
+      updates.push(`day_of_week = $${paramIndex++}`);
+      values.push(day_of_week);
+    }
+    if (start_time) {
+      updates.push(`start_time = $${paramIndex++}`);
+      values.push(start_time);
+    }
+    if (end_time) {
+      updates.push(`end_time = $${paramIndex++}`);
+      values.push(end_time);
+    }
+
+    values.push(scheduleId);
+
+    const query = `
+      UPDATE doctor_schedules
+      SET ${updates.join(", ")}
+      WHERE id = $${paramIndex}
+      RETURNING *;
+    `;
+
+    const result = await client.query(query, values);
+
+    res.status(200).json({
+      message: "Schedule updated successfully",
+      schedule: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Update schedule error:", err);
+    res.status(500).json({ error: "Database error while updating schedule" });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// DELETE: Remove doctor's schedule
+router.delete("/schedules/:id", authenticateToken, async (req, res) => {
+  const doctorId = req.user.id;
+  const scheduleId = req.params.id;
+
+  let client;
+  try {
+    client = await pool.connect();
+
+    // Verify ownership
+    const check = await client.query(
+      `SELECT id FROM doctor_schedules WHERE id = $1 AND doctor_id = $2`,
+      [scheduleId, doctorId]
+    );
+
+    if (check.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "Schedule not found or unauthorized" });
+    }
+
+    // Delete the schedule
+    await client.query(`DELETE FROM doctor_schedules WHERE id = $1`, [
+      scheduleId,
+    ]);
+
+    res.status(200).json({ message: "Schedule deleted successfully" });
+  } catch (err) {
+    console.error("Delete schedule error:", err);
+    res.status(500).json({ error: "Database error while deleting schedule" });
+  } finally {
+    if (client) client.release();
+  }
+});
+
 module.exports = router;
