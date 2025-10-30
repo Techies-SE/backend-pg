@@ -272,6 +272,71 @@ router.get("/labtests", authenticateToken, async (req, res) => {
   }
 });
 
+// new route for lab test details + recommendations
+router.get(
+  "/lab-test/:hn_number/:lab_test_date",
+  authenticateToken,
+  async (req, res) => {
+    const { hn_number, lab_test_date } = req.params;
+
+    try {
+      const query = `
+      SELECT 
+        lt.lab_test_date,
+        JSON_AGG(
+          JSON_BUILD_OBJECT(
+            'lab_test_date', lt.lab_test_date::date,
+            'id', lt.id,
+            'test_name', ltm.test_name,
+            'doctor_id', lt.doctor_id,
+            'doctor_name', d.name,
+            'doctor_recommendation', r.doctor_recommendation,
+            'generated_recommendation', r.generated_recommendation,
+            'lab_items', (
+              SELECT JSON_AGG(
+                JSON_BUILD_OBJECT(
+                  'lab_item_name', li.lab_item_name,
+                  'lab_item_value', lr.lab_item_value,
+                  'lab_item_status', lr.lab_item_status,
+                  'unit', li.unit,
+                  'normal_range', lref.normal_range
+                )
+              )
+              FROM lab_results lr
+              JOIN lab_items li ON lr.lab_item_id = li.id
+              LEFT JOIN lab_references lref ON li.id = lref.lab_item_id
+              WHERE lr.lab_test_id = lt.id
+            )
+          )
+        ) AS lab_tests
+      FROM lab_tests lt
+      JOIN doctors d ON lt.doctor_id = d.id
+      JOIN lab_tests_master ltm ON lt.lab_test_master_id = ltm.id
+      LEFT JOIN recommendations r 
+        ON r.hn_number = lt.hn_number 
+        AND r.lab_test_date::date = lt.lab_test_date::date
+      WHERE lt.hn_number = $1
+        AND lt.lab_test_date::date = $2
+      GROUP BY lt.lab_test_date
+      ORDER BY lt.lab_test_date DESC;
+    `;
+
+      const { rows } = await pool.query(query, [hn_number, lab_test_date]);
+
+      res.status(200).json({
+        success: true,
+        data: rows[0] || {}, // return the single date object or empty
+      });
+    } catch (error) {
+      console.error("Error fetching detailed lab tests:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+);
+
 // Lab Items contained in each Patient's Lab Test (Protected Route)
 router.get(
   "/lab-tests/:lab_test_id/lab-test-items",
