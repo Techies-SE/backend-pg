@@ -250,7 +250,7 @@ router.get("/labtests", authenticateToken, async (req, res) => {
           )
         ) AS lab_tests
       FROM lab_tests lt
-      JOIN lab_test_master ltm ON lt.lab_test_master_id = ltm.id
+      JOIN lab_tests_master ltm ON lt.lab_test_master_id = ltm.id
       JOIN doctors d ON lt.doctor_id = d.id
       WHERE lt.patient_id = $1
       GROUP BY lt.lab_test_date
