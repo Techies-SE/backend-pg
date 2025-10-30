@@ -233,6 +233,45 @@ router.get("/lab-tests", authenticateToken, async (req, res) => {
   }
 });
 
+// new route for lab test list
+router.get("/labtests", authenticateToken, async (req, res) => {
+  const userId = req.user.id; // patient_id
+
+  try {
+    const query = `
+      SELECT 
+        lt.lab_test_date,
+        JSON_AGG(
+          JSON_BUILD_OBJECT(
+            'id', lt.id,
+            'test_name', ltm.test_name,
+            'doctor_id', lt.doctor_id,
+            'doctor_name', d.name
+          )
+        ) AS lab_tests
+      FROM lab_tests lt
+      JOIN lab_test_master ltm ON lt.lab_test_master_id = ltm.id
+      JOIN doctors d ON lt.doctor_id = d.id
+      WHERE lt.patient_id = $1
+      GROUP BY lt.lab_test_date
+      ORDER BY lt.lab_test_date DESC;
+    `;
+
+    const { rows } = await pool.query(query, [userId]);
+
+    res.status(200).json({
+      success: true,
+      data: rows, // [{ lab_test_date, lab_tests: [ {...}, {...} ] }]
+    });
+  } catch (error) {
+    console.error("Error fetching grouped lab tests for patient:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
 // Lab Items contained in each Patient's Lab Test (Protected Route)
 router.get(
   "/lab-tests/:lab_test_id/lab-test-items",
@@ -316,134 +355,6 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 });
 
 // Create a patient
-// router.post("/", authenticateToken, async (req, res) => {
-//   const {
-//     hn_number,
-//     name,
-//     citizen_id,
-//     phone_no,
-//     doctor_id,
-//     lab_test_master_id,
-//   } = req.body;
-
-//   // Validate required fields
-//   if (
-//     !hn_number ||
-//     !name ||
-//     !citizen_id ||
-//     !phone_no ||
-//     !doctor_id ||
-//     !lab_test_master_id
-//   ) {
-//     return res.status(400).json({ error: "All fields are required." });
-//   }
-
-//   try {
-//     // Get a connection from the pool
-//     const client = await pool.connect();
-
-//     try {
-//       // Start transaction
-//       await client.query('BEGIN');
-
-//       let patientId;
-
-//       // Check if patient already exists
-//       const { rows: existingPatients } = await client.query(
-//         "SELECT * FROM patients WHERE hn_number = $1 OR citizen_id = $2",
-//         [hn_number, citizen_id]
-//       );
-
-//       // Check for patient existence and potential conflicts
-//       if (existingPatients.length > 0) {
-//         const existingPatient = existingPatients[0];
-
-//         // Check for citizen_id conflict with different HN number
-//         if (
-//           existingPatient.hn_number !== hn_number &&
-//           existingPatient.citizen_id === citizen_id
-//         ) {
-//           return res.status(409).json({
-//             error: `Citizen ID ${citizen_id} already exists with different HN number ${existingPatient.hn_number}`,
-//           });
-//         }
-
-//         // Check for HN number conflict with different citizen_id
-//         if (
-//           existingPatient.hn_number === hn_number &&
-//           existingPatient.citizen_id !== citizen_id
-//         ) {
-//           return res.status(409).json({
-//             error: `HN number ${hn_number} already exists with different Citizen ID`,
-//           });
-//         }
-
-//         // Patient exists, use their ID
-//         patientId = existingPatient.id;
-//         // If patient exists but all details match, we can proceed with just the lab test
-//         console.log(
-//           `Patient with HN ${hn_number} already exists, adding lab test only`
-//         );
-//       } else {
-//         // Patient doesn't exist, create new patient
-//         const hashedPassword = await bcrypt.hash(citizen_id, saltRounds);
-
-//         // Insert into patients table
-//         const { rows: patientInsertResult } = await client.query(
-//           `INSERT INTO patients
-//            (hn_number, name, citizen_id, phone_no, password, lab_data_status, account_status, doctor_id)
-//            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-//           [
-//             hn_number,
-//             name,
-//             citizen_id,
-//             phone_no,
-//             hashedPassword,
-//             false,
-//             false,
-//             doctor_id,
-//           ]
-//         );
-
-//         patientId = patientInsertResult[0].id;
-
-//         // INSERT into patient_data table
-//         await client.query(
-//           `INSERT INTO patient_data (hn_number) VALUES ($1)`,
-//           [hn_number]
-//         );
-
-//         console.log(`Created new patient with HN ${hn_number}`);
-//       }
-
-//       // Insert into lab_tests table
-//       const currentTimestamp = new Date();
-//       await client.query(
-//         `INSERT INTO lab_tests
-//          (patient_id, lab_test_master_id, status, lab_test_date, hn_number)
-//          VALUES ($1, $2, $3, $4, $5)`,
-//         [patientId, lab_test_master_id, "pending", currentTimestamp, hn_number]
-//       );
-
-//       // Commit transaction
-//       await client.query('COMMIT');
-
-//       res.status(201).json({
-//         message: "Lab test created successfully.",
-//       });
-//     } catch (error) {
-//       // Rollback in case of error
-//       await client.query('ROLLBACK');
-//       throw error;
-//     } finally {
-//       // Always release the connection
-//       client.release();
-//     }
-//   } catch (error) {
-//     console.error("Error processing patient request:", error);
-//     res.status(500).json({ error: error.message });
-//   }
-// });
 router.post("/", authenticateToken, async (req, res) => {
   const { hn_number, name, citizen_id, phone_no, date_of_birth, gender } =
     req.body;
@@ -744,286 +655,6 @@ router.get("/:hn_number", authenticateToken, async (req, res) => {
 });
 
 //View detials of a patient by hn_number and group by lab_test_id and date
-// router.get("/:hn_number/:lab_test_id", authenticateToken, async (req, res) => {
-//   const { hn_number, lab_test_id } = req.params;
-
-//   try {
-//     const client = await pool.connect();
-
-//     const { rows } = await client.query(
-//       `
-//         SELECT
-//           p.hn_number,
-//           p.name,
-//           p.citizen_id,
-//           p.phone_no,
-//           p.lab_data_status,
-//           p.account_status,
-//           p.registered_at,
-//           p.updated_at,
-
-//           pd.gender,
-//           pd.blood_type,
-//           pd.age,
-//           pd.date_of_birth,
-//           pd.weight,
-//           pd.height,
-//           pd.bmi,
-
-//           lt.id AS lab_test_id,
-//           lt.lab_test_date,
-//           ltm.test_name,
-
-//           li.id AS lab_item_id,
-//           li.lab_item_name,
-//           li.unit,
-//           lr.lab_item_value,
-//           lr.lab_item_status,
-//           ref.normal_range
-
-//         FROM patients p
-//         LEFT JOIN patient_data pd ON pd.hn_number = p.hn_number
-//         LEFT JOIN lab_tests lt ON lt.patient_id = p.id
-//         LEFT JOIN lab_tests_master ltm ON ltm.id = lt.lab_test_master_id
-//         LEFT JOIN lab_results lr ON lr.lab_test_id = lt.id
-//         LEFT JOIN lab_items li ON li.id = lr.lab_item_id
-//         LEFT JOIN lab_references ref ON ref.lab_item_id = li.id
-
-//         WHERE p.hn_number = $1 AND lt.id = $2
-//         ORDER BY lt.lab_test_date DESC
-//       `,
-//       [hn_number, lab_test_id]
-//     );
-
-//     client.release();
-
-//     if (rows.length === 0) {
-//       return res.status(404).json({
-//         message: "No lab test data found for given HN and Lab Test ID",
-//       });
-//     }
-
-//     // Build a structured JSON response
-//     const patient = {
-//       hn_number: rows[0].hn_number,
-//       name: rows[0].name,
-//       citizen_id: rows[0].citizen_id,
-//       phone_no: rows[0].phone_no,
-//       lab_data_status: rows[0].lab_data_status,
-//       account_status: rows[0].account_status,
-//       registered_at: rows[0].registered_at,
-//       updated_at: rows[0].updated_at,
-//       patient_data: {
-//         gender: rows[0].gender,
-//         blood_type: rows[0].blood_type,
-//         age: rows[0].age,
-//         date_of_birth: rows[0].date_of_birth,
-//         weight: rows[0].weight,
-//         height: rows[0].height,
-//         bmi: rows[0].bmi,
-//       },
-//       lab_test: {
-//         id: rows[0].lab_test_id,
-//         test_name: rows[0].test_name,
-//         lab_test_date: rows[0].lab_test_date,
-//         results: [],
-//       },
-//     };
-
-//     const resultSet = new Set();
-
-//     for (const row of rows) {
-//       if (row.lab_item_id && !resultSet.has(row.lab_item_id)) {
-//         patient.lab_test.results.push({
-//           lab_item_name: row.lab_item_name,
-//           unit: row.unit,
-//           value: row.lab_item_value,
-//           lab_item_status: row.lab_item_status,
-//           normal_range: row.normal_range,
-//         });
-//         resultSet.add(row.lab_item_id);
-//       }
-//     }
-
-//     res.json(patient);
-//   } catch (err) {
-//     console.error("Error fetching lab test details:", err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-// router.get("/:hn_number/:lab_test_id", authenticateToken, async (req, res) => {
-//   const { hn_number, lab_test_id } = req.params;
-
-//   try {
-//     const client = await pool.connect();
-
-//     // First, get the main lab test details
-//     const mainTestQuery = await client.query(
-//       `
-//         SELECT
-//           p.hn_number,
-//           p.name,
-//           p.citizen_id,
-//           p.phone_no,
-//           p.lab_data_status,
-//           p.account_status,
-//           p.registered_at,
-//           p.updated_at,
-
-//           pd.gender,
-//           pd.blood_type,
-//           pd.age,
-//           pd.date_of_birth,
-//           pd.weight,
-//           pd.height,
-//           pd.bmi,
-
-//           lt.id AS lab_test_id,
-//           lt.lab_test_date,
-//           ltm.test_name,
-
-//           li.id AS lab_item_id,
-//           li.lab_item_name,
-//           li.unit,
-//           lr.lab_item_value,
-//           lr.lab_item_status,
-//           ref.normal_range
-
-//         FROM patients p
-//         LEFT JOIN patient_data pd ON pd.hn_number = p.hn_number
-//         LEFT JOIN lab_tests lt ON lt.patient_id = p.id
-//         LEFT JOIN lab_tests_master ltm ON ltm.id = lt.lab_test_master_id
-//         LEFT JOIN lab_results lr ON lr.lab_test_id = lt.id
-//         LEFT JOIN lab_items li ON li.id = lr.lab_item_id
-//         LEFT JOIN lab_references ref ON ref.lab_item_id = li.id
-
-//         WHERE p.hn_number = $1 AND lt.id = $2
-//         ORDER BY lt.lab_test_date DESC
-//       `,
-//       [hn_number, lab_test_id]
-//     );
-
-//     if (mainTestQuery.rows.length === 0) {
-//       client.release();
-//       return res.status(404).json({
-//         message: "No lab test data found for given HN and Lab Test ID",
-//       });
-//     }
-
-//     // Get the test date from the main lab test
-//     const testDate = mainTestQuery.rows[0].lab_test_date;
-
-//     // Get all other lab tests from the same date for this patient
-//     const sameDayTestsQuery = await client.query(
-//       `
-//         SELECT
-//           lt.id AS lab_test_id,
-//           lt.lab_test_date,
-//           ltm.test_name,
-
-//           li.id AS lab_item_id,
-//           li.lab_item_name,
-//           li.unit,
-//           lr.lab_item_value,
-//           lr.lab_item_status,
-//           ref.normal_range
-
-//         FROM patients p
-//         LEFT JOIN lab_tests lt ON lt.patient_id = p.id
-//         LEFT JOIN lab_tests_master ltm ON ltm.id = lt.lab_test_master_id
-//         LEFT JOIN lab_results lr ON lr.lab_test_id = lt.id
-//         LEFT JOIN lab_items li ON li.id = lr.lab_item_id
-//         LEFT JOIN lab_references ref ON ref.lab_item_id = li.id
-
-//         WHERE p.hn_number = $1
-//         AND DATE(lt.lab_test_date) = DATE($2)
-//         AND lt.id != $3
-//         ORDER BY lt.id, li.lab_item_name
-//       `,
-//       [hn_number, testDate, lab_test_id]
-//     );
-
-//     client.release();
-
-//     // Build the main lab test response
-//     const patient = {
-//       hn_number: mainTestQuery.rows[0].hn_number,
-//       name: mainTestQuery.rows[0].name,
-//       citizen_id: mainTestQuery.rows[0].citizen_id,
-//       phone_no: mainTestQuery.rows[0].phone_no,
-//       lab_data_status: mainTestQuery.rows[0].lab_data_status,
-//       account_status: mainTestQuery.rows[0].account_status,
-//       registered_at: mainTestQuery.rows[0].registered_at,
-//       updated_at: mainTestQuery.rows[0].updated_at,
-//       patient_data: {
-//         gender: mainTestQuery.rows[0].gender,
-//         blood_type: mainTestQuery.rows[0].blood_type,
-//         age: mainTestQuery.rows[0].age,
-//         date_of_birth: mainTestQuery.rows[0].date_of_birth,
-//         weight: mainTestQuery.rows[0].weight,
-//         height: mainTestQuery.rows[0].height,
-//         bmi: mainTestQuery.rows[0].bmi,
-//       },
-//       lab_test: {
-//         id: mainTestQuery.rows[0].lab_test_id,
-//         test_name: mainTestQuery.rows[0].test_name,
-//         lab_test_date: mainTestQuery.rows[0].lab_test_date,
-//         results: [],
-//       },
-//       other_tests_same_day: [], // New field for other tests on the same day
-//     };
-
-//     // Process main test results
-//     const mainResultSet = new Set();
-//     for (const row of mainTestQuery.rows) {
-//       if (row.lab_item_id && !mainResultSet.has(row.lab_item_id)) {
-//         patient.lab_test.results.push({
-//           lab_item_name: row.lab_item_name,
-//           unit: row.unit,
-//           value: row.lab_item_value,
-//           lab_item_status: row.lab_item_status,
-//           normal_range: row.normal_range,
-//         });
-//         mainResultSet.add(row.lab_item_id);
-//       }
-//     }
-
-//     // Process other tests from the same day
-//     if (sameDayTestsQuery.rows.length > 0) {
-//       const testGroups = {};
-
-//       // Group results by test ID
-//       sameDayTestsQuery.rows.forEach((row) => {
-//         if (!testGroups[row.lab_test_id]) {
-//           testGroups[row.lab_test_id] = {
-//             id: row.lab_test_id,
-//             test_name: row.test_name,
-//             lab_test_date: row.lab_test_date,
-//             results: [],
-//           };
-//         }
-
-//         if (row.lab_item_id) {
-//           testGroups[row.lab_test_id].results.push({
-//             lab_item_name: row.lab_item_name,
-//             unit: row.unit,
-//             value: row.lab_item_value,
-//             lab_item_status: row.lab_item_status,
-//             normal_range: row.normal_range,
-//           });
-//         }
-//       });
-
-//       // Convert grouped tests to array
-//       patient.other_tests_same_day = Object.values(testGroups);
-//     }
-
-//     res.json(patient);
-//   } catch (err) {
-//     console.error("Error fetching lab test details:", err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
 router.get("/:hn_number/:lab_test_id", authenticateToken, async (req, res) => {
   const { hn_number, lab_test_id } = req.params;
 
