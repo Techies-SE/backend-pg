@@ -46,6 +46,7 @@ router.post("/patients", async (req, res) => {
       token,
       firstTimeLogin: isFirstTimeLogin,
       id: patient.id,
+      hn_number: patient.hn_number
     });
 
     console.log("Login Status:", res.statusCode);
