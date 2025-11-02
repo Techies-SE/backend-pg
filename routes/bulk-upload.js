@@ -613,6 +613,39 @@ router.post(
 
           const requiredItemIds = requiredItemsRes.rows.map((r) => r.id);
           const providedItemIds = lab_items.map((i) => i.lab_item_id);
+          // inside the loop for (const [lab_test_master_id, lab_items] of lab_tests) {
+
+          // 🆕 Get the patient's gender
+          const patientData = await client.query(
+            "SELECT gender FROM patient_data WHERE hn_number = $1",
+            [hn_number]
+          );
+          const patientGender = patientData.rows[0]?.gender;
+
+          // 🆕 Check if this test requires Gender
+          const genderItemRes = await client.query(
+            `SELECT li.id as lab_item_id
+            FROM lab_items li
+            JOIN lab_test_items lti ON li.id = lti.lab_item_id
+            WHERE li.lab_item_name = 'Gender' AND lti.lab_test_master_id = $1`,
+            [lab_test_master_id]
+          );
+
+          if (genderItemRes.rowCount > 0) {
+            const genderLabItemId = genderItemRes.rows[0].lab_item_id;
+            const genderValue = patientGender === "male" ? 0 : 1;
+
+            // Check if already added (avoid duplication)
+            const alreadyHasGender = lab_items.some(
+              (item) => item.lab_item_id === genderLabItemId
+            );
+            if (!alreadyHasGender) {
+              lab_items.push({
+                lab_item_id: genderLabItemId,
+                lab_item_value: genderValue,
+              });
+            }
+          }
 
           // Find missing required items
           const missingItems = requiredItemsRes.rows.filter(
