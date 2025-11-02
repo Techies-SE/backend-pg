@@ -150,10 +150,7 @@ const generateAndSaveRecommendationByDate = async function (
     // });
 
     // Create prompt with grouped data
-    const prompt = createRecommendationPrompt(
-      patientName,
-      labData
-    );
+    const prompt = createRecommendationPrompt(patientName, labData);
 
     // Generate recommendation
     const aiRecommendation = predictLabs(prompt);
@@ -181,6 +178,314 @@ const generateAndSaveRecommendationByDate = async function (
 };
 
 // Route to upload lab results
+// router.post(
+//   "/upload-lab-results",
+//   upload.single("file"),
+//   authenticateToken,
+//   async (req, res) => {
+//     if (!req.file) {
+//       return res.status(400).json({ message: "CSV file is required." });
+//     }
+
+//     // Mapping of CSV column names to lab item IDs
+//     const LAB_ITEM_MAP = {
+//       Systolic: 1,
+//       Diastolic: 2,
+//       Cholesterol: 3,
+//       Triglyceride: 4,
+//       HDL: 5,
+//       LDL: 6,
+//       eGFR: 7,
+//       Creatinine: 8,
+//       "Total Protein": 10,
+//       Globulin: 11,
+//       Albumin: 12,
+//       AST: 13,
+//       ALT: 14,
+//       ALP: 15,
+//       "Total Bilirubin": 16,
+//       "Direct Bilirubin": 17,
+//       "Uric Acid": 18,
+//       HCT: 19,
+//       MCV: 20,
+//       WBC: 21,
+//       Neutrophile: 22,
+//       Eosinophile: 23,
+//       Monocyte: 24,
+//       "PLT Count": 25,
+//       Basophile: 26,
+//       Lymphocyte: 27,
+//     };
+
+//     const results = [];
+//     const insertedLabTests = new Set();
+//     const processedRecommendations = new Set();
+//     let client;
+
+//     try {
+//       client = await pool.connect();
+//       await client.query("BEGIN");
+
+//       // Parse CSV
+//       await new Promise((resolve, reject) => {
+//         fs.createReadStream(req.file.path)
+//           .pipe(csv())
+//           .on("data", (data) => results.push(data))
+//           .on("end", resolve)
+//           .on("error", reject);
+//       });
+
+//       // Group CSV data by patient, date, and doctor for processing
+//       const groupedData = {};
+
+//       for (const row of results) {
+//         const key = `${row.hn_number}|${row.lab_test_date}|${row.doctor_id}`;
+//         if (!groupedData[key]) {
+//           groupedData[key] = {
+//             hn_number: row.hn_number,
+//             lab_test_date: row.lab_test_date,
+//             doctor_id: row.doctor_id,
+//             lab_tests: new Map(),
+//           };
+//         }
+
+//         const testId = row.lab_test_master_id;
+//         if (!groupedData[key].lab_tests.has(testId)) {
+//           groupedData[key].lab_tests.set(testId, []);
+//         }
+
+//         const labItems = groupedData[key].lab_tests.get(testId);
+
+//         // Process all columns except the fixed ones
+//         Object.keys(row).forEach((columnName) => {
+//           if (
+//             ![
+//               "hn_number",
+//               "lab_test_master_id",
+//               "lab_test_date",
+//               "doctor_id",
+//             ].includes(columnName)
+//           ) {
+//             const labItemId = LAB_ITEM_MAP[columnName];
+//             const labItemValue = row[columnName];
+
+//             if (
+//               labItemId &&
+//               labItemValue !== "" &&
+//               labItemValue !== null &&
+//               labItemValue !== undefined
+//             ) {
+//               labItems.push({
+//                 lab_item_id: labItemId,
+//                 lab_item_value: labItemValue,
+//               });
+//             }
+//           }
+//         });
+//       }
+
+//       // Process each patient group
+//       for (const [groupKey, groupData] of Object.entries(groupedData)) {
+//         const { hn_number, lab_test_date, doctor_id, lab_tests } = groupData;
+//         const user = req.user.id;
+
+//         // 1. Validate patient exists
+//         const patientRes = await client.query(
+//           "SELECT id FROM patients WHERE hn_number = $1",
+//           [hn_number]
+//         );
+//         if (patientRes.rowCount === 0) {
+//           console.warn(`Patient not found: ${hn_number}. Skipping...`);
+//           continue;
+//         }
+
+//         const patientData = await client.query(
+//           "SELECT gender from patient_data where hn_number = $1",
+//           [hn_number]
+//         );
+//         const patient_id = patientRes.rows[0].id;
+//         const patientGender = patientData.rows[0].gender;
+
+//         // 2. Assign patient-doctor relationship
+//         try {
+//           await client.query(
+//             `INSERT INTO patient_doctor (patient_id, doctor_id, assigned_by, assigned_at)
+//              VALUES ($1, $2, $3, NOW())`,
+//             [patient_id, doctor_id, user]
+//           );
+//         } catch (error) {
+//           if (error.code !== "23505") {
+//             // Ignore duplicate key errors
+//             throw error;
+//           }
+//         }
+
+//         const testsToProcess = [];
+
+//         // 3. Process each lab test for this patient
+//         for (const [lab_test_master_id, lab_items] of lab_tests) {
+//           // Insert lab test
+//           const labTestRes = await client.query(
+//             `INSERT INTO lab_tests (patient_id, lab_test_master_id, lab_test_date, uploaded_by, doctor_id, hn_number)
+//              VALUES ($1, $2, $3, $4, $5, $6)
+//              RETURNING id`,
+//             [
+//               patient_id,
+//               lab_test_master_id,
+//               lab_test_date,
+//               user,
+//               doctor_id,
+//               hn_number,
+//             ]
+//           );
+
+//           const lab_test_id = labTestRes.rows[0].id;
+//           insertedLabTests.add(`${lab_test_id}|${lab_test_master_id}`);
+
+//           // Store test info for processing
+//           testsToProcess.push({
+//             lab_test_id,
+//             lab_test_master_id: parseInt(lab_test_master_id),
+//             lab_items,
+//           });
+
+//           // Add gender to lab items if required
+//           const genderItemRes = await client.query(
+//             `SELECT li.id as lab_item_id
+//              FROM lab_items li
+//              JOIN lab_test_items lti ON li.id = lti.lab_item_id
+//              WHERE li.lab_item_name = 'Gender' AND lti.lab_test_master_id = $1`,
+//             [lab_test_master_id]
+//           );
+
+//           if (genderItemRes.rowCount > 0) {
+//             const genderLabItemId = genderItemRes.rows[0].lab_item_id;
+//             const genderValue = patientGender === "male" ? 0 : 1;
+
+//             lab_items.push({
+//               lab_item_id: genderLabItemId,
+//               lab_item_value: genderValue,
+//             });
+//           }
+
+//           // Insert lab results
+//           for (const item of lab_items) {
+//             await client.query(
+//               `INSERT INTO lab_results (lab_test_id, lab_item_id, lab_item_value, lab_item_status)
+//                VALUES ($1, $2, $3, NULL)`,
+//               [lab_test_id, item.lab_item_id, item.lab_item_value]
+//             );
+//           }
+//         }
+
+//         // Process each test with Python
+//         for (const test of testsToProcess) {
+//           try {
+//             // Get all items for this test
+//             const itemsRes = await client.query(
+//               `SELECT li.lab_item_name, lr.lab_item_value
+//                FROM lab_results lr
+//                JOIN lab_items li ON lr.lab_item_id = li.id
+//                WHERE lr.lab_test_id = $1`,
+//               [test.lab_test_id]
+//             );
+
+//             // Prepare input for Python
+//             const inputForPython = {};
+//             for (const item of itemsRes.rows) {
+//               if (item.lab_item_name === "Gender") {
+//                 inputForPython[item.lab_item_name] =
+//                   item.lab_item_value == 0 ? "M" : "F";
+//               } else {
+//                 inputForPython[item.lab_item_name] = parseFloat(
+//                   item.lab_item_value
+//                 );
+//               }
+//             }
+
+//             // Run Python process
+//             const statuses = await runPythonProcess(
+//               pythonScriptPath,
+//               test.lab_test_master_id,
+//               inputForPython
+//             );
+
+//             const normalize = (name) =>
+//               name.toLowerCase().replace(/\s+/g, "").replace("_", "");
+//             for (const item of itemsRes.rows) {
+//               // Skip Gender
+//               if (item.lab_item_name === "Gender") continue;
+
+//               let status = "unknown";
+//               for (const key in statuses) {
+//                 if (statuses[key] && statuses[key].classification) {
+//                   if (normalize(key) === normalize(item.lab_item_name)) {
+//                     status = statuses[key].classification;
+//                     break;
+//                   }
+//                 }
+//               }
+//               await client.query(
+//                 `UPDATE lab_results SET lab_item_status = $1
+//                  WHERE lab_test_id = $2 AND lab_item_id = (
+//                    SELECT id FROM lab_items WHERE lab_item_name = $3
+//                  )`,
+//                 [status, test.lab_test_id, item.lab_item_name]
+//               );
+//             }
+//           } catch (processingError) {
+//             console.error(
+//               `Error processing lab test ${test.lab_test_id}:`,
+//               processingError.message
+//             );
+//           }
+//         }
+
+//         // Update patient lab_data_status
+//         await client.query(
+//           `UPDATE patients SET lab_data_status = true
+//            WHERE hn_number = $1`,
+//           [hn_number]
+//         );
+//       }
+
+//       await client.query("COMMIT");
+
+//       // Generate recommendations
+//       for (const [groupKey, groupData] of Object.entries(groupedData)) {
+//         const { hn_number, lab_test_date, doctor_id } = groupData;
+//         const recommendationKey = `${hn_number}|${lab_test_date}`;
+
+//         if (processedRecommendations.has(recommendationKey)) continue;
+
+//         try {
+//           await generateAndSaveRecommendationByDate(
+//             hn_number,
+//             doctor_id,
+//             lab_test_date
+//           );
+//           processedRecommendations.add(recommendationKey);
+//         } catch (error) {
+//           console.error(
+//             `Failed to generate recommendation for ${hn_number}:`,
+//             error.message
+//           );
+//         }
+//       }
+
+//       res.status(200).json({ message: "Lab results uploaded successfully." });
+//     } catch (error) {
+//       if (client) await client.query("ROLLBACK");
+//       console.error("Error processing lab results:", error);
+//       res.status(500).json({ message: "Error processing lab results." });
+//     } finally {
+//       if (client) client.release();
+//       fs.unlink(req.file.path, (err) => {
+//         if (err) console.error("Error deleting temp file:", err);
+//       });
+//     }
+//   }
+// );
 router.post(
   "/upload-lab-results",
   upload.single("file"),
@@ -229,7 +534,7 @@ router.post(
       client = await pool.connect();
       await client.query("BEGIN");
 
-      // Parse CSV
+      // --- 1️⃣ Parse CSV file ---
       await new Promise((resolve, reject) => {
         fs.createReadStream(req.file.path)
           .pipe(csv())
@@ -238,9 +543,8 @@ router.post(
           .on("error", reject);
       });
 
-      // Group CSV data by patient, date, and doctor for processing
+      // --- 2️⃣ Group by patient, date, and doctor ---
       const groupedData = {};
-
       for (const row of results) {
         const key = `${row.hn_number}|${row.lab_test_date}|${row.doctor_id}`;
         if (!groupedData[key]) {
@@ -259,7 +563,7 @@ router.post(
 
         const labItems = groupedData[key].lab_tests.get(testId);
 
-        // Process all columns except the fixed ones
+        // Collect all non-fixed columns as lab items
         Object.keys(row).forEach((columnName) => {
           if (
             ![
@@ -287,19 +591,52 @@ router.post(
         });
       }
 
-      // Process each patient group
+      // --- 3️⃣ Validate all lab tests before inserting anything ---
+      for (const [groupKey, groupData] of Object.entries(groupedData)) {
+        const { hn_number, lab_tests } = groupData;
+
+        for (const [lab_test_master_id, lab_items] of lab_tests) {
+          // Fetch required lab items for that test
+          const requiredItemsRes = await client.query(
+            `SELECT li.id, li.lab_item_name
+             FROM lab_items li
+             JOIN lab_test_items lti ON li.id = lti.lab_item_id
+             WHERE lti.lab_test_master_id = $1`,
+            [lab_test_master_id]
+          );
+
+          const requiredItemIds = requiredItemsRes.rows.map((r) => r.id);
+          const providedItemIds = lab_items.map((i) => i.lab_item_id);
+
+          // Find missing required items
+          const missingItems = requiredItemsRes.rows.filter(
+            (r) => !providedItemIds.includes(r.id)
+          );
+
+          if (missingItems.length > 0) {
+            // ❌ Strict validation failure — throw error & rollback everything
+            const missingNames = missingItems
+              .map((m) => m.lab_item_name)
+              .join(", ");
+            throw new Error(
+              `Missing lab items for HN ${hn_number}, Test ID ${lab_test_master_id}: ${missingNames}`
+            );
+          }
+        }
+      }
+
+      // --- 4️⃣ All tests validated successfully — start inserting ---
       for (const [groupKey, groupData] of Object.entries(groupedData)) {
         const { hn_number, lab_test_date, doctor_id, lab_tests } = groupData;
         const user = req.user.id;
 
-        // 1. Validate patient exists
+        // Validate patient exists
         const patientRes = await client.query(
           "SELECT id FROM patients WHERE hn_number = $1",
           [hn_number]
         );
         if (patientRes.rowCount === 0) {
-          console.warn(`Patient not found: ${hn_number}. Skipping...`);
-          continue;
+          throw new Error(`Patient not found: ${hn_number}`);
         }
 
         const patientData = await client.query(
@@ -309,7 +646,7 @@ router.post(
         const patient_id = patientRes.rows[0].id;
         const patientGender = patientData.rows[0].gender;
 
-        // 2. Assign patient-doctor relationship
+        // Assign patient-doctor relationship
         try {
           await client.query(
             `INSERT INTO patient_doctor (patient_id, doctor_id, assigned_by, assigned_at)
@@ -317,17 +654,13 @@ router.post(
             [patient_id, doctor_id, user]
           );
         } catch (error) {
-          if (error.code !== "23505") {
-            // Ignore duplicate key errors
-            throw error;
-          }
+          if (error.code !== "23505") throw error;
         }
 
         const testsToProcess = [];
 
-        // 3. Process each lab test for this patient
+        // Insert lab tests
         for (const [lab_test_master_id, lab_items] of lab_tests) {
-          // Insert lab test
           const labTestRes = await client.query(
             `INSERT INTO lab_tests (patient_id, lab_test_master_id, lab_test_date, uploaded_by, doctor_id, hn_number)
              VALUES ($1, $2, $3, $4, $5, $6)
@@ -345,14 +678,7 @@ router.post(
           const lab_test_id = labTestRes.rows[0].id;
           insertedLabTests.add(`${lab_test_id}|${lab_test_master_id}`);
 
-          // Store test info for processing
-          testsToProcess.push({
-            lab_test_id,
-            lab_test_master_id: parseInt(lab_test_master_id),
-            lab_items,
-          });
-
-          // Add gender to lab items if required
+          // Add Gender if required by this test
           const genderItemRes = await client.query(
             `SELECT li.id as lab_item_id 
              FROM lab_items li 
@@ -364,7 +690,6 @@ router.post(
           if (genderItemRes.rowCount > 0) {
             const genderLabItemId = genderItemRes.rows[0].lab_item_id;
             const genderValue = patientGender === "male" ? 0 : 1;
-
             lab_items.push({
               lab_item_id: genderLabItemId,
               lab_item_value: genderValue,
@@ -379,12 +704,17 @@ router.post(
               [lab_test_id, item.lab_item_id, item.lab_item_value]
             );
           }
+
+          testsToProcess.push({
+            lab_test_id,
+            lab_test_master_id: parseInt(lab_test_master_id),
+            lab_items,
+          });
         }
 
         // Process each test with Python
         for (const test of testsToProcess) {
           try {
-            // Get all items for this test
             const itemsRes = await client.query(
               `SELECT li.lab_item_name, lr.lab_item_value
                FROM lab_results lr
@@ -393,7 +723,6 @@ router.post(
               [test.lab_test_id]
             );
 
-            // Prepare input for Python
             const inputForPython = {};
             for (const item of itemsRes.rows) {
               if (item.lab_item_name === "Gender") {
@@ -406,56 +735,28 @@ router.post(
               }
             }
 
-            // Run Python process
             const statuses = await runPythonProcess(
               pythonScriptPath,
               test.lab_test_master_id,
               inputForPython
             );
 
-            // Update statuses in database
-            // for (const item of itemsRes.rows) {
-            //   if (item.lab_item_name === "Gender") continue;
-
-            //   // Handle different key formats
-            //   const possibleKeys = [
-            //     item.lab_item_name.toLowerCase().replace(/\s+/g, "_"),
-            //     item.lab_item_name.toLowerCase(),
-            //     item.lab_item_name,
-            //     item.lab_item_name.replace(/\s+/g, ""),
-            //   ];
-
-            //   let status = "unknown";
-            //   for (const key of possibleKeys) {
-            //     if (statuses[key] && statuses[key].classification) {
-            //       status = statuses[key].classification;
-            //       break;
-            //     }
-            //   }
-
-            //   await client.query(
-            //     `UPDATE lab_results SET lab_item_status = $1
-            //      WHERE lab_test_id = $2 AND lab_item_id = (
-            //        SELECT id FROM lab_items WHERE lab_item_name = $3
-            //      )`,
-            //     [status, test.lab_test_id, item.lab_item_name]
-            //   );
-            // }
             const normalize = (name) =>
               name.toLowerCase().replace(/\s+/g, "").replace("_", "");
+
             for (const item of itemsRes.rows) {
-              // Skip Gender
               if (item.lab_item_name === "Gender") continue;
 
               let status = "unknown";
               for (const key in statuses) {
-                if (statuses[key] && statuses[key].classification) {
+                if (statuses[key]?.classification) {
                   if (normalize(key) === normalize(item.lab_item_name)) {
                     status = statuses[key].classification;
                     break;
                   }
                 }
               }
+
               await client.query(
                 `UPDATE lab_results SET lab_item_status = $1
                  WHERE lab_test_id = $2 AND lab_item_id = (
@@ -472,21 +773,20 @@ router.post(
           }
         }
 
-        // Update patient lab_data_status
+        // Mark patient lab data status
         await client.query(
-          `UPDATE patients SET lab_data_status = true 
-           WHERE hn_number = $1`,
+          `UPDATE patients SET lab_data_status = true WHERE hn_number = $1`,
           [hn_number]
         );
       }
 
+      // Commit only if everything passed validation
       await client.query("COMMIT");
 
       // Generate recommendations
       for (const [groupKey, groupData] of Object.entries(groupedData)) {
         const { hn_number, lab_test_date, doctor_id } = groupData;
         const recommendationKey = `${hn_number}|${lab_test_date}`;
-
         if (processedRecommendations.has(recommendationKey)) continue;
 
         try {
@@ -506,9 +806,11 @@ router.post(
 
       res.status(200).json({ message: "Lab results uploaded successfully." });
     } catch (error) {
-      if (client) await client.query("ROLLBACK");
-      console.error("Error processing lab results:", error);
-      res.status(500).json({ message: "Error processing lab results." });
+      if (client) await client.query("ROLLBACK"); // ❗ Roll back everything if any test fails
+      console.error("Error processing lab results:", error.message);
+      res.status(400).json({
+        message: `Upload failed: ${error.message}`,
+      });
     } finally {
       if (client) client.release();
       fs.unlink(req.file.path, (err) => {
