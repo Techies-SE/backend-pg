@@ -729,10 +729,171 @@ router.post(
           if (genderItemRes.rowCount > 0) {
             const genderLabItemId = genderItemRes.rows[0].lab_item_id;
             const genderValue = patientGender === "male" ? 0 : 1;
-            lab_items.push({
-              lab_item_id: genderLabItemId,
-              lab_item_value: genderValue,
-            });
+            // lab_items.push({
+            //   lab_item_id: genderLabItemId,
+            //   lab_item_value: genderValue,
+            // });
+            // --- 4️⃣ All tests validated successfully — start inserting ---
+            for (const [groupKey, groupData] of Object.entries(groupedData)) {
+              const { hn_number, lab_test_date, doctor_id, lab_tests } =
+                groupData;
+              const user = req.user.id;
+
+              // Validate patient exists
+              const patientRes = await client.query(
+                "SELECT id FROM patients WHERE hn_number = $1",
+                [hn_number]
+              );
+              if (patientRes.rowCount === 0) {
+                throw new Error(`Patient not found: ${hn_number}`);
+              }
+
+              const patientData = await client.query(
+                "SELECT gender from patient_data where hn_number = $1",
+                [hn_number]
+              );
+              const patient_id = patientRes.rows[0].id;
+              const patientGender = patientData.rows[0].gender;
+
+              // Assign patient-doctor relationship
+              try {
+                await client.query(
+                  `INSERT INTO patient_doctor (patient_id, doctor_id, assigned_by, assigned_at)
+             VALUES ($1, $2, $3, NOW())`,
+                  [patient_id, doctor_id, user]
+                );
+              } catch (error) {
+                if (error.code !== "23505") throw error;
+              }
+
+              const testsToProcess = [];
+
+              // Insert lab tests
+              for (const [lab_test_master_id, lab_items] of lab_tests) {
+                const labTestRes = await client.query(
+                  `INSERT INTO lab_tests (patient_id, lab_test_master_id, lab_test_date, uploaded_by, doctor_id, hn_number)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id`,
+                  [
+                    patient_id,
+                    lab_test_master_id,
+                    lab_test_date,
+                    user,
+                    doctor_id,
+                    hn_number,
+                  ]
+                );
+
+                const lab_test_id = labTestRes.rows[0].id;
+                insertedLabTests.add(`${lab_test_id}|${lab_test_master_id}`);
+
+                // Add Gender if required by this test
+                const genderItemRes = await client.query(
+                  `SELECT li.id as lab_item_id 
+             FROM lab_items li 
+             JOIN lab_test_items lti ON li.id = lti.lab_item_id 
+             WHERE li.lab_item_name = 'Gender' AND lti.lab_test_master_id = $1`,
+                  [lab_test_master_id]
+                );
+
+                if (genderItemRes.rowCount > 0) {
+                  const genderLabItemId = genderItemRes.rows[0].lab_item_id;
+                  const genderValue = patientGender === "male" ? 0 : 1;
+                  const alreadyHasGender = lab_items.some(
+                    (item) => item.lab_item_id === genderLabItemId
+                  );
+
+                  if (!alreadyHasGender) {
+                    lab_items.push({
+                      lab_item_id: genderLabItemId,
+                      lab_item_value: genderValue,
+                    });
+                  }
+                }
+
+                // Insert lab results
+                for (const item of lab_items) {
+                  await client.query(
+                    `INSERT INTO lab_results (lab_test_id, lab_item_id, lab_item_value, lab_item_status)
+               VALUES ($1, $2, $3, NULL)`,
+                    [lab_test_id, item.lab_item_id, item.lab_item_value]
+                  );
+                }
+
+                testsToProcess.push({
+                  lab_test_id,
+                  lab_test_master_id: parseInt(lab_test_master_id),
+                  lab_items,
+                });
+              }
+
+              // Process each test with Python
+              for (const test of testsToProcess) {
+                try {
+                  const itemsRes = await client.query(
+                    `SELECT li.lab_item_name, lr.lab_item_value
+               FROM lab_results lr
+               JOIN lab_items li ON lr.lab_item_id = li.id
+               WHERE lr.lab_test_id = $1`,
+                    [test.lab_test_id]
+                  );
+
+                  const inputForPython = {};
+                  for (const item of itemsRes.rows) {
+                    if (item.lab_item_name === "Gender") {
+                      inputForPython[item.lab_item_name] =
+                        item.lab_item_value == 0 ? "M" : "F";
+                    } else {
+                      inputForPython[item.lab_item_name] = parseFloat(
+                        item.lab_item_value
+                      );
+                    }
+                  }
+
+                  const statuses = await runPythonProcess(
+                    pythonScriptPath,
+                    test.lab_test_master_id,
+                    inputForPython
+                  );
+
+                  const normalize = (name) =>
+                    name.toLowerCase().replace(/\s+/g, "").replace("_", "");
+
+                  for (const item of itemsRes.rows) {
+                    if (item.lab_item_name === "Gender") continue;
+
+                    let status = "unknown";
+                    for (const key in statuses) {
+                      if (statuses[key]?.classification) {
+                        if (normalize(key) === normalize(item.lab_item_name)) {
+                          status = statuses[key].classification;
+                          break;
+                        }
+                      }
+                    }
+
+                    await client.query(
+                      `UPDATE lab_results SET lab_item_status = $1
+                 WHERE lab_test_id = $2 AND lab_item_id = (
+                   SELECT id FROM lab_items WHERE lab_item_name = $3
+                 )`,
+                      [status, test.lab_test_id, item.lab_item_name]
+                    );
+                  }
+                } catch (processingError) {
+                  console.error(
+                    `Error processing lab test ${test.lab_test_id}:`,
+                    processingError.message
+                  );
+                }
+              }
+
+              // Mark patient lab data status
+              await client.query(
+                `UPDATE patients SET lab_data_status = true WHERE hn_number = $1`,
+                [hn_number]
+              );
+            }
           }
 
           // Insert lab results
