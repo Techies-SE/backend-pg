@@ -36,9 +36,9 @@ router.get("/profile", authenticateToken, async (req, res) => {
     // Parse float values for height, weight, bmi
     const parsedLabResults = labResults.map((item) => ({
       ...item,
-      weight: item.weight ? parseFloat(item.weight) : null,
-      height: item.height ? parseFloat(item.height) : null,
-      bmi: item.bmi ? parseFloat(item.bmi) : null,
+      weight: item.weight !== null ? Number(item.weight) * 1.0 : null,
+      height: item.height !== null ? Number(item.height) * 1.0 : null,
+      bmi: item.bmi !== null ? Number(item.bmi) * 1.0 : null,
     }));
 
     res.json({
