@@ -33,6 +33,14 @@ router.get("/profile", authenticateToken, async (req, res) => {
       [patient.hn_number]
     );
 
+    // Parse float values for height, weight, bmi
+    const parsedLabResults = labResults.map((item) => ({
+      ...item,
+      weight: item.weight ? parseFloat(item.weight) : null,
+      height: item.height ? parseFloat(item.height) : null,
+      bmi: item.bmi ? parseFloat(item.bmi) : null,
+    }));
+
     res.json({
       message: "Welcome to your profile",
       user: {
@@ -43,7 +51,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
         phone_no: patient.phone_no,
         lab_data_status: patient.lab_data_status,
         account_status: patient.account_status,
-        lab_data: labResults.length > 0 ? labResults : [],
+        lab_data: parsedLabResults.length > 0 ? labResults : [],
       },
     });
   } catch (err) {
