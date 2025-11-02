@@ -39,12 +39,12 @@ router.post("/patients", async (req, res) => {
       { expiresIn: process.env.TOKEN_EXPIRY || "1h" }
     );
 
-    const isFirstTimeLogin = patient.account_status === 0;
+    //const isFirstTimeLogin = patient.account_status === 0;
 
     res.json({
       message: "Login successful",
       token,
-      firstTimeLogin: isFirstTimeLogin,
+      firstTimeLogin: patient.account_status,
       id: patient.id,
       hn_number: patient.hn_number
     });
