@@ -135,8 +135,13 @@ router.get("/appointments", authenticateToken, async (req, res) => {
       [userId]
     );
 
-    if (rows.length === 0)
-      return res.status(404).json({ message: "No appointments found" });
+    if (rows.length === 0) {
+      return res.json({
+        patient_id: userId,
+        total_appointments: 0,
+        appointments: [],
+      });
+    }
     res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
