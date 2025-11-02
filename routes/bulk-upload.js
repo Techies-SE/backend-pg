@@ -544,6 +544,7 @@ router.post(
       });
 
       // --- 2️⃣ Group CSV data by patient, date, and doctor ---
+      // --- 2️⃣ Group CSV data by patient, date, and doctor ---
       const groupedData = {};
 
       for (const row of results) {
@@ -611,10 +612,6 @@ router.post(
             [lab_test_master_id]
           );
 
-          const requiredItemIds = requiredItemsRes.rows.map((r) => r.id);
-          const providedItemIds = lab_items.map((i) => i.lab_item_id);
-          // inside the loop for (const [lab_test_master_id, lab_items] of lab_tests) {
-
           // 🆕 Get the patient's gender
           const patientData = await client.query(
             "SELECT gender FROM patient_data WHERE hn_number = $1",
@@ -646,6 +643,9 @@ router.post(
               });
             }
           }
+
+          const requiredItemIds = requiredItemsRes.rows.map((r) => r.id);
+          const providedItemIds = lab_items.map((i) => i.lab_item_id);
 
           // Find missing required items
           const missingItems = requiredItemsRes.rows.filter(
