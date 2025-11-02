@@ -543,8 +543,9 @@ router.post(
           .on("error", reject);
       });
 
-      // --- 2️⃣ Group by patient, date, and doctor ---
+      // --- 2️⃣ Group CSV data by patient, date, and doctor ---
       const groupedData = {};
+
       for (const row of results) {
         const key = `${row.hn_number}|${row.lab_test_date}|${row.doctor_id}`;
         if (!groupedData[key]) {
@@ -556,39 +557,44 @@ router.post(
           };
         }
 
-        const testId = row.lab_test_master_id;
-        if (!groupedData[key].lab_tests.has(testId)) {
-          groupedData[key].lab_tests.set(testId, []);
-        }
+        // For each column in the CSV (lab item)
+        for (const columnName of Object.keys(row)) {
+          if (["hn_number", "lab_test_date", "doctor_id"].includes(columnName))
+            continue;
 
-        const labItems = groupedData[key].lab_tests.get(testId);
+          const value = row[columnName];
+          const labItemId = LAB_ITEM_MAP[columnName];
 
-        // Collect all non-fixed columns as lab items
-        Object.keys(row).forEach((columnName) => {
           if (
-            ![
-              "hn_number",
-              "lab_test_master_id",
-              "lab_test_date",
-              "doctor_id",
-            ].includes(columnName)
-          ) {
-            const labItemId = LAB_ITEM_MAP[columnName];
-            const labItemValue = row[columnName];
+            !labItemId ||
+            value === "" ||
+            value === null ||
+            value === undefined
+          )
+            continue;
 
-            if (
-              labItemId &&
-              labItemValue !== "" &&
-              labItemValue !== null &&
-              labItemValue !== undefined
-            ) {
-              labItems.push({
-                lab_item_id: labItemId,
-                lab_item_value: labItemValue,
-              });
-            }
+          // 🆕 Determine which lab_test_master this item belongs to
+          const testRes = await client.query(
+            `SELECT lab_test_master_id FROM lab_test_items WHERE lab_item_id = $1`,
+            [labItemId]
+          );
+
+          if (testRes.rowCount === 0) {
+            console.warn(`No lab_test_master found for item: ${columnName}`);
+            continue;
           }
-        });
+
+          const lab_test_master_id = testRes.rows[0].lab_test_master_id;
+
+          // 🆕 Group lab items dynamically by their test ID
+          if (!groupedData[key].lab_tests.has(lab_test_master_id)) {
+            groupedData[key].lab_tests.set(lab_test_master_id, []);
+          }
+
+          groupedData[key].lab_tests
+            .get(lab_test_master_id)
+            .push({ lab_item_id: labItemId, lab_item_value: value });
+        }
       }
 
       // --- 3️⃣ Validate all lab tests before inserting anything ---
