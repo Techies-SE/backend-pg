@@ -247,6 +247,43 @@ router.get("/lab-tests", authenticateToken, async (req, res) => {
 });
 
 // new route for lab test list
+// router.get("/labtests", authenticateToken, async (req, res) => {
+//   const userId = req.user.id; // patient_id
+
+//   try {
+//     const query = `
+//       SELECT
+//         lt.lab_test_date,
+//         JSON_AGG(
+//           JSON_BUILD_OBJECT(
+//             'id', lt.id,
+//             'test_name', ltm.test_name,
+//             'doctor_id', lt.doctor_id,
+//             'doctor_name', d.name
+//           )
+//         ) AS lab_tests
+//       FROM lab_tests lt
+//       JOIN lab_tests_master ltm ON lt.lab_test_master_id = ltm.id
+//       JOIN doctors d ON lt.doctor_id = d.id
+//       WHERE lt.patient_id = $1
+//       GROUP BY lt.lab_test_date
+//       ORDER BY lt.lab_test_date DESC;
+//     `;
+
+//     const { rows } = await pool.query(query, [userId]);
+
+//     res.status(200).json({
+//       success: true,
+//       data: rows, // [{ lab_test_date, lab_tests: [ {...}, {...} ] }]
+//     });
+//   } catch (error) {
+//     console.error("Error fetching grouped lab tests for patient:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// });
 router.get("/labtests", authenticateToken, async (req, res) => {
   const userId = req.user.id; // patient_id
 
@@ -265,7 +302,11 @@ router.get("/labtests", authenticateToken, async (req, res) => {
       FROM lab_tests lt
       JOIN lab_tests_master ltm ON lt.lab_test_master_id = ltm.id
       JOIN doctors d ON lt.doctor_id = d.id
+      JOIN recommendations r 
+        ON r.lab_test_date = lt.lab_test_date 
+        AND r.hn_number = lt.hn_number
       WHERE lt.patient_id = $1
+        AND r.status = 'approved'
       GROUP BY lt.lab_test_date
       ORDER BY lt.lab_test_date DESC;
     `;
@@ -277,7 +318,7 @@ router.get("/labtests", authenticateToken, async (req, res) => {
       data: rows, // [{ lab_test_date, lab_tests: [ {...}, {...} ] }]
     });
   } catch (error) {
-    console.error("Error fetching grouped lab tests for patient:", error);
+    console.error("Error fetching approved lab tests for patient:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
