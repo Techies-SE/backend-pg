@@ -57,7 +57,7 @@ function predictLabs(input) {
       // recommendations.push(prediction);
       const formatted = `${
         prediction.prediction
-      } (Probability: ${prediction.probability.toFixed(3)})`;
+      } (Probability: ${prediction.probability.toFixed(6)})`;
       recommendations.push(formatted);
     }
   }
