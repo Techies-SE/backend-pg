@@ -8,9 +8,16 @@ const fs = require("fs");
 const path = require("path");
 
 //softmax
-function softmax(arr) {
+// function softmax(arr) {
+//   const max = Math.max(...arr);
+//   const exps = arr.map((x) => Math.exp(x - max));
+//   const sum = exps.reduce((a, b) => a + b, 0);
+//   return exps.map((e) => e / sum);
+// }
+
+function softmax(arr, temperature = 1.5) {
   const max = Math.max(...arr);
-  const exps = arr.map((x) => Math.exp(x - max));
+  const exps = arr.map((x) => Math.exp((x - max) / temperature));
   const sum = exps.reduce((a, b) => a + b, 0);
   return exps.map((e) => e / sum);
 }
@@ -48,7 +55,9 @@ function predictLabs(input) {
       const prediction = predict(artifact, input);
       results[testName] = prediction;
       // recommendations.push(prediction);
-      const formatted = `${prediction.prediction} (Probability: ${prediction.probability.toFixed(3)})`;
+      const formatted = `${
+        prediction.prediction
+      } (Probability: ${prediction.probability.toFixed(3)})`;
       recommendations.push(formatted);
     }
   }
@@ -61,7 +70,11 @@ function predictLabs(input) {
   // };
 
   //paragraph view
-  return recommendations.join("");
+  // return recommendations.join("");
+
+  //list view
+  const bulletList = recommendations.map((r) => `• ${r}`).join("\n");
+  return bulletList;
 }
 
 function predict(artifact, inputFeatures) {
@@ -88,6 +101,11 @@ function predict(artifact, inputFeatures) {
   const bestIdx = probs.indexOf(Math.max(...probs));
   //old
   // return artifact.classes[bestIdx];
+
+  console.log("Scores:", scores);
+  console.log("Probabilities:", probs);
+  console.log("Best class:", artifact.classes[bestIdx]);
+
   return {
     prediction: artifact.classes[bestIdx],
     probability: probs[bestIdx],
