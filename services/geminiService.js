@@ -48,7 +48,8 @@ function predictLabs(input) {
       const prediction = predict(artifact, input);
       results[testName] = prediction;
       // recommendations.push(prediction);
-      recommendations.push(prediction.prediction);
+      const formatted = `${prediction.prediction} (Probability: ${prediction.probability.toFixed(3)})`;
+      recommendations.push(formatted);
     }
   }
   if (Object.keys(results).length === 0) {
@@ -60,13 +61,7 @@ function predictLabs(input) {
   // };
 
   //paragraph view
-  // return recommendations.join("");
-  console.log(details);
-  
-  return {
-    details: results,
-    combined: recommendations.join("")
-  };
+  return recommendations.join("");
 }
 
 function predict(artifact, inputFeatures) {
