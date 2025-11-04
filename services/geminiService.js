@@ -7,13 +7,12 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs");
 const path = require("path");
 
-
 //softmax
 function softmax(arr) {
-    const max = Math.max(...arr);
-    const exps = arr.map((x) => Math.exp(x - max));
-    const sum = exps.reduce((a, b) => a + b, 0);
-    return exps.map((e) => e / sum);
+  const max = Math.max(...arr);
+  const exps = arr.map((x) => Math.exp(x - max));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  return exps.map((e) => e / sum);
 }
 
 // Absolute path to the models directory
@@ -48,7 +47,8 @@ function predictLabs(input) {
     if (hasAll) {
       const prediction = predict(artifact, input);
       results[testName] = prediction;
-      recommendations.push(prediction);
+      // recommendations.push(prediction);
+      recommendations.push(prediction.prediction);
     }
   }
   if (Object.keys(results).length === 0) {
@@ -58,7 +58,15 @@ function predictLabs(input) {
   //   details: results,
   //   combined: recommendations.join(""),
   // };
-  return recommendations.join("");
+
+  //paragraph view
+  // return recommendations.join("");
+  console.log(details);
+  
+  return {
+    details: results,
+    combined: recommendations.join("")
+  };
 }
 
 function predict(artifact, inputFeatures) {
@@ -83,7 +91,16 @@ function predict(artifact, inputFeatures) {
   const probs = softmax(scores);
 
   const bestIdx = probs.indexOf(Math.max(...probs));
-  return artifact.classes[bestIdx];
+  //old
+  // return artifact.classes[bestIdx];
+  return {
+    prediction: artifact.classes[bestIdx],
+    probability: probs[bestIdx],
+    probabilities: probs.map((p, i) => ({
+      class: artifact.classes[i],
+      probability: p,
+    })),
+  };
 }
 
 // module.exports = { generateRecommendation };
