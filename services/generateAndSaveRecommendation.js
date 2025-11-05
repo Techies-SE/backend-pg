@@ -1,5 +1,5 @@
 const { pool } = require("../db.js");
-const { predictLabs } = require("./geminiService.js");
+const { predictLabs } = require("./ai_service.js");
 const { createRecommendationPrompt } = require("./recommendationPrompt.js");
 
 module.exports.generateAndSaveRecommendation = async function (lab_test_id) {
@@ -43,28 +43,47 @@ module.exports.generateAndSaveRecommendation = async function (lab_test_id) {
       return item;
     });
 
-    const prompt = createRecommendationPrompt(
-      patientName,
-      transformedLabData
-    );
+    const prompt = createRecommendationPrompt(patientName, transformedLabData);
 
     // Step 2: Generate recommendation
-    // const aiRecommendation = predictLabs(prompt);
-    const aiRecommendation = predictLabs(prompt);
-    console.log(`AI recommendation before inserting: ${aiRecommendation}`);
+    const aiResult = predictLabs(prompt);
+    const generatedRecommendation = aiResult.bulletList;
+    const detailedResults = aiResult.detailedResults;
+    console.log(`aiResult: ${aiResult}`);
+    console.log(`generatedRecommendation: ${generatedRecommendation}`);
+    console.log(`detailedResults: ${detailedResults}`);
 
     // Step 3: Save to recommendations table with doctor_id
-    await pool.query(
+    const { rows: recInsect } = await pool.query(
       `
       INSERT INTO recommendations 
         (generated_recommendation, status, lab_test_id, doctor_id, updated_at)
       VALUES ($1, 'pending', $2, $3, NOW())
       `,
-      [aiRecommendation, lab_test_id, doctorId]
+      [aiResult, lab_test_id, doctorId]
     );
 
+    const recommendationId = recInsert[0].id;
+
+    // Step 4: Insert each AI summary row
+    for (const [testName, result] of Object.entries(detailedResults)) {
+      await pool.query(
+        `
+        INSERT INTO ai_prediction_details
+          (recommendation_id, test_name, best_class, probability)
+        VALUES ($1, $2, $3, $4)
+        `,
+        [
+          recommendationId,
+          testName,
+          result.prediction,
+          result.probability.toFixed(6),
+        ]
+      );
+    }
+
     return {
-      message: "Recommendation generated and saved successfully.",
+      message: "Recommendation + AI summary saved successfully.",
       doctorId: doctorId,
     };
   } catch (error) {

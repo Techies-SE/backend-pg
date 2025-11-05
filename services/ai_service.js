@@ -1,6 +1,3 @@
-// geminiService.js
-// services/geminiService.js
-// import axios from "axios";
 const axios = require("axios");
 const https = require("https");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -74,7 +71,11 @@ function predictLabs(input) {
 
   //list view
   const bulletList = recommendations.map((r) => `• ${r}`).join("\n");
-  return bulletList;
+  //return bulletList;
+  return {
+    bulletList,
+   detailedResults: results,
+  }
 }
 
 function predict(artifact, inputFeatures) {
