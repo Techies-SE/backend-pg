@@ -153,17 +153,54 @@ const generateAndSaveRecommendationByDate = async function (
     const prompt = createRecommendationPrompt(patientName, labData);
 
     // Generate recommendation
-    const aiRecommendation = predictLabs(prompt);
+    const aiResult = predictLabs(prompt);
+    const generatedRecommendation = aiResult.bulletList;
+    const detailedResults = aiResult.detailedResults;
+
+    console.log("AI Result:", {
+      hasRecommendation: !!generatedRecommendation,
+      detailedResultsCount: Object.keys(detailedResults || {}).length,
+    });
 
     // Save recommendation with date grouping
-    await pool.query(
+    const { rows: recInsert } = await pool.query(
       `
       INSERT INTO recommendations 
         (generated_recommendation, status, hn_number, doctor_id, lab_test_date)
       VALUES ($1, 'pending', $2, $3, $4)
+      RETURNING id
       `,
-      [aiRecommendation, hn_number, doctor_id, testDate]
+      [generatedRecommendation, hn_number, doctor_id, testDate]
     );
+
+    const recommendationId = recInsert[0].id;
+    console.log("✅ Recommendation ID:", recommendationId);
+
+    if (detailedResults && typeof detailedResults === "object") {
+      for (const [testName, result] of Object.entries(detailedResults)) {
+        console.log("Inserting AI detail:", {
+          testName,
+          prediction: result.prediction,
+        });
+
+        await pool.query(
+          `
+          INSERT INTO ai_prediction_details
+            (recommendation_id, test_name, best_class, probability)
+          VALUES ($1, $2, $3, $4)
+          `,
+          [
+            recommendationId,
+            testName,
+            result.prediction,
+            result.probability.toFixed(6),
+          ]
+        );
+      }
+      console.log("✅ AI prediction details inserted");
+    } else {
+      console.warn("⚠️ No detailedResults to insert");
+    }
 
     return {
       message:
