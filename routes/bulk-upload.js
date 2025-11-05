@@ -176,6 +176,7 @@ const generateAndSaveRecommendationByDate = async function (
     const recommendationId = recInsert[0].id;
     console.log("✅ Recommendation ID:", recommendationId);
 
+    // INSERT AI PREDICTION DETAILS
     if (detailedResults && typeof detailedResults === "object") {
       for (const [testName, result] of Object.entries(detailedResults)) {
         // Remove '_artifact' suffix and format for display
@@ -183,7 +184,15 @@ const generateAndSaveRecommendationByDate = async function (
           .replace(/_artifact$/, "") // Remove _artifact
           .replace(/_/g, " ") // Replace _ with spaces
           .split(" ") // Split into words
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize first letter
+          .map((word) => {
+            // Special cases for acronyms
+            const lowerWord = word.toLowerCase();
+            if (lowerWord === "cbc") return "CBC";
+            if (lowerWord === "ldl") return "LDL";
+            if (lowerWord === "hdl") return "HDL";
+            // Regular capitalization
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+          })
           .join(" "); // Join back together
 
         console.log("Inserting AI detail:", {
@@ -194,13 +203,13 @@ const generateAndSaveRecommendationByDate = async function (
 
         await pool.query(
           `
-            INSERT INTO ai_prediction_details
-            (recommendation_id, test_name, best_class, probability)
-            VALUES ($1, $2, $3, $4)
+          INSERT INTO ai_prediction_details
+          (recommendation_id, test_name, best_class, probability)
+          VALUES ($1, $2, $3, $4)
           `,
           [
             recommendationId,
-            cleanTestName, // ← Use formatted name
+            cleanTestName,
             result.prediction,
             result.probability.toFixed(6),
           ]
