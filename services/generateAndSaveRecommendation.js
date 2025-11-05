@@ -63,7 +63,7 @@ module.exports.generateAndSaveRecommendation = async function (lab_test_id) {
       [aiResult, lab_test_id, doctorId]
     );
 
-    const recommendationId = recInsert[0].id;
+    const recommendationId = recInsect[0].id;
 
     // Step 4: Insert each AI summary row
     for (const [testName, result] of Object.entries(detailedResults)) {
