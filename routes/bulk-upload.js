@@ -13,7 +13,7 @@ const pythonScriptPath = path.join(__dirname, "../rba/script.py");
 const {
   createRecommendationPrompt,
 } = require("../services/recommendationPrompt.js");
-const { predictLabs } = require("../services/geminiService.js");
+const { predictLabs } = require("../services/ai_service.js");
 const authenticateToken = require("../middleware/auth");
 const TEST_REQUIREMENTS = {
   1: ["Systolic", "Diastolic"], // Blood Pressure
