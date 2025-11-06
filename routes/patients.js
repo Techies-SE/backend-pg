@@ -543,32 +543,36 @@ router.post("/", authenticateToken, async (req, res) => {
             error: `HN number ${hn_number} already exists with different Citizen ID`,
           });
         }
-        // Patient exists with matching HN and citizen_id - update their info
-        patientId = existingPatient.id;
-        // Update patient basic info
-        await client.query(
-          `UPDATE patients SET name = $1, phone_no = $2 WHERE id = $3`,
-          [name, phone_no, patientId]
-        );
-        // Update or insert patient_data
-        const { rows: existingData } = await client.query(
-          "SELECT * FROM patient_data WHERE hn_number = $1",
-          [hn_number]
-        );
+        // // Patient exists with matching HN and citizen_id - update their info
+        // patientId = existingPatient.id;
+        // // Update patient basic info
+        // await client.query(
+        //   `UPDATE patients SET name = $1, phone_no = $2 WHERE id = $3`,
+        //   [name, phone_no, patientId]
+        // );
+        // // Update or insert patient_data
+        // const { rows: existingData } = await client.query(
+        //   "SELECT * FROM patient_data WHERE hn_number = $1",
+        //   [hn_number]
+        // );
 
-        if (existingData.length > 0) {
-          await client.query(
-            `UPDATE patient_data SET date_of_birth = $1, gender = $2 WHERE hn_number = $3`,
-            [date_of_birth, gender.toLowerCase(), hn_number]
-          );
-        } else {
-          await client.query(
-            `INSERT INTO patient_data (hn_number, date_of_birth, gender) VALUES ($1, $2, $3)`,
-            [hn_number, date_of_birth, gender.toLowerCase()]
-          );
-        }
+        // if (existingData.length > 0) {
+        //   await client.query(
+        //     `UPDATE patient_data SET date_of_birth = $1, gender = $2 WHERE hn_number = $3`,
+        //     [date_of_birth, gender.toLowerCase(), hn_number]
+        //   );
+        // } else {
+        //   await client.query(
+        //     `INSERT INTO patient_data (hn_number, date_of_birth, gender) VALUES ($1, $2, $3)`,
+        //     [hn_number, date_of_birth, gender.toLowerCase()]
+        //   );
+        // }
 
-        console.log(`Updated existing patient with HN ${hn_number}`);
+        // console.log(`Updated existing patient with HN ${hn_number}`);
+
+        return res.status(409).json({
+          error: `Patient with HN number ${hn_number} and Citizen ID ${citizen_id} already exists.`,
+        });
       } else {
         isNewPatient = true;
         // Patient doesn't exist, create new patient
