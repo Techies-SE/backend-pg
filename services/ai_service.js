@@ -52,9 +52,8 @@ function predictLabs(input) {
       const prediction = predict(artifact, input);
       results[testName] = prediction;
       // recommendations.push(prediction);
-      const formatted = `${
-        prediction.prediction
-      } (Probability: ${prediction.probability.toFixed(6)})`;
+      const formatted = 
+        prediction.prediction;
       recommendations.push(formatted);
     }
   }
