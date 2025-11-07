@@ -1633,11 +1633,15 @@ router.post("/:hnNumber/vitals", async (req, res) => {
       //   "SELECT * FROM patients WHERE hn_number = $1",
       //   [hnNumber]
       // );
+      // const patientResult = await pool.query(
+      //   `SELECT p.*, pd.height, pd.weight, pd.bmi
+      //     FROM patients p
+      //     LEFT JOIN patient_data pd ON p.hn_number = pd.hn_number
+      //     WHERE p.hn_number = $1`,
+      //   [hnNumber]
+      // );
       const patientResult = await pool.query(
-        `SELECT p.*, pd.height, pd.weight, pd.bmi 
-          FROM patients p
-          LEFT JOIN patient_data pd ON p.hn_number = pd.hn_number
-          WHERE p.hn_number = $1`,
+        "SELECT * FROM patient_data WHERE hn_number = $1",
         [hnNumber]
       );
 
@@ -1648,8 +1652,22 @@ router.post("/:hnNumber/vitals", async (req, res) => {
         });
       }
 
+      console.log("Query result:", patientResult.rows);
+
       const patient = patientResult.rows[0];
-      const height = patient.height; // assuming height is stored in cm
+      const height = patient.height;
+
+      console.log("Patient object:", patient);
+      console.log("Height value:", height, "Type:", typeof height);
+      console.log("Weight value:", weight, "Type:", typeof weight);
+
+      // Validate height
+      if (!height || height <= 0) {
+        return res.status(400).json({
+          status: "failed",
+          message: "Patient height is not set. Cannot calculate BMI.",
+        });
+      }
 
       // 3️⃣ Update weight in patients table and recalculate BMI
       const heightInMeters = height / 100;
