@@ -1730,4 +1730,34 @@ router.get("/:hnNumber/vitals/latest", authenticateToken, async (req, res) => {
   }
 });
 
+// fetch patients recent vitals history (only 3)
+router.get("/:hnNumber/vitals/history", authenticateToken, async (req, res) => {
+  const { hnNumber } = req.params;
+  const limit = parseInt(req.query.limit) || 3;
+
+  try {
+    const history = await pool.query(
+      `SELECT id, weight, systolic, diastolic, created_at
+       FROM patient_vitals
+       WHERE hn_number = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [hnNumber, limit]
+    );
+
+    return res.status(200).json({
+      status: "success",
+      count: history.rows.length,
+      history: history.rows,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({
+      status: "failed",
+      message: "Server error while fetching vitals history.",
+    });
+  }
+});
+
+
 module.exports = router;
