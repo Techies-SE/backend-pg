@@ -1615,7 +1615,7 @@ router.get("/details/:hnNumber", async (req, res) => {
 
 // ------------------ Patients Vitals ------------------
 // patient vital submission form
-router.post("/:hnNumber/vitals", async (req, res) => {
+router.post("/:hnNumber/vitals", authenticateToken, async (req, res) => {
   const { hnNumber } = req.params;
   const { weight, systolic, diastolic } = req.body;
   try {
@@ -1839,6 +1839,126 @@ router.get("/:hnNumber/vitals/trends", authenticateToken, async (req, res) => {
       status: "failed",
       message: "Server error while fetching vitals trend data.",
     });
+  }
+});
+
+// ------------------ Patients Lab Items ------------------
+// fetch historical lab-item-data for trends/charts
+router.get("/:hnNumber/lab-items/:labItemId/trends", async (req, res) => {
+  const { hnNumber, labItemId } = req.params;
+  const { range = "1M" } = req.query;
+
+  try {
+    let interval;
+    switch (range) {
+      case "1W":
+        interval = "7 days";
+        break;
+      case "6M":
+        interval = "6 months";
+        break;
+      case "1Y":
+        interval = "1 year";
+        break;
+      default:
+        interval = "1 month";
+        break;
+    }
+
+    const query = `
+      SELECT 
+        li.lab_item_name,
+        li.unit,
+        CAST(lt.lab_test_date AS DATE) AS date,
+        lr.lab_item_value
+      FROM lab_results lr
+      JOIN lab_tests lt ON lr.lab_test_id = lt.id
+      JOIN lab_items li ON lr.lab_item_id = li.id
+      WHERE lt.hn_number = $1
+        AND lr.lab_item_id = $2
+        AND lt.lab_test_date >= NOW() - INTERVAL '${interval}'
+      ORDER BY lt.lab_test_date ASC;
+    `;
+
+    const { rows } = await pool.query(query, [hnNumber, labItemId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "No trend data found." });
+    }
+
+    const labItemName = rows[0].lab_item_name;
+    const unit = rows[0].unit;
+    const trend = rows.map((r) => ({
+      date: r.date,
+      value: parseFloat(r.lab_item_value),
+    }));
+
+    res.json({
+      lab_item_id: labItemId,
+      lab_item_name: labItemName,
+      unit,
+      range,
+      trend,
+    });
+  } catch (error) {
+    console.error("Error fetching trend data:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// fetch historical data list for each lab item
+router.get("/:hnNumber/lab-items/:labItemId/history", async (req, res) => {
+  const { hnNumber, labItemId } = req.params;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+
+  try {
+    const query = `
+      SELECT 
+        li.lab_item_name,
+        li.unit,
+        CAST(lt.lab_test_date AS DATE) AS date,
+        lr.lab_item_value
+        FROM lab_results lr
+        JOIN lab_tests lt ON lr.lab_test_id = lt.id
+        JOIN lab_items li ON lr.lab_item_id = li.id
+        WHERE lt.hn_number = $1
+        AND lr.lab_item_id = $2
+        ORDER BY lt.lab_test_date DESC
+        LIMIT $3 OFFSET $4;
+    `;
+
+    const { rows } = await pool.query(query, [
+      hnNumber,
+      labItemId,
+      limit,
+      offset,
+    ]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "No history data found." });
+    }
+
+    const labItemName = rows[0].lab_item_name;
+    const unit = rows[0].unit;
+    const history = rows.map((r) => ({
+      date: r.date,
+      value: parseFloat(r.lab_item_value),
+      unit: r.unit,
+    }));
+
+    res.json({
+      lab_item_id: labItemId,
+      lab_item_name: labItemName,
+      unit,
+      page,
+      limit,
+      history,
+    });
+  } catch (error) {
+    console.error("Error fetching historical data:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
