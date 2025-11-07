@@ -1803,7 +1803,7 @@ router.get(
 );
 
 // fetch patients vital data for trends/charts
-router.get("/:hnNumber/vitals/trends", async (req, res) => {
+router.get("/:hnNumber/vitals/trends", authenticateToken, async (req, res) => {
   const { hnNumber } = req.params;
   const { range } = req.query;
 
