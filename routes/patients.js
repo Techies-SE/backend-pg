@@ -1629,8 +1629,15 @@ router.post("/:hnNumber/vitals", async (req, res) => {
       }
 
       // 2️⃣ Check if patient exists
+      // const patientResult = await pool.query(
+      //   "SELECT * FROM patients WHERE hn_number = $1",
+      //   [hnNumber]
+      // );
       const patientResult = await pool.query(
-        "SELECT * FROM patients WHERE hn_number = $1",
+        `SELECT p.*, pd.height, pd.weight, pd.bmi 
+          FROM patients p
+          LEFT JOIN patient_data pd ON p.hn_number = pd.hn_number
+          WHERE p.hn_number = $1`,
         [hnNumber]
       );
 
