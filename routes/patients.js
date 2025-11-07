@@ -1671,7 +1671,7 @@ router.post("/:hnNumber/vitals", async (req, res) => {
           patient: {
             hn_number: hnNumber,
             updated_weight: weight,
-            new_bmi: bmi,
+            updated_bmi: bmi,
           },
           vitals_record: insertResult.rows[0],
         },
