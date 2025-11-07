@@ -1614,7 +1614,7 @@ router.get("/details/:hnNumber", async (req, res) => {
 });
 
 // ------------------ Patients Vitals ------------------
-// patient submit weight, systolic, diastolic
+// patient vital submission form
 router.post("/:hnNumber/vitals", async (req, res) => {
   const { hnNumber } = req.params;
   const { weight, systolic, diastolic } = req.body;
@@ -1730,7 +1730,7 @@ router.get("/:hnNumber/vitals/latest", authenticateToken, async (req, res) => {
   }
 });
 
-// fetch patients recent vitals history (only 3)
+// fetch patients recent vitals history (only 3 history)
 router.get("/:hnNumber/vitals/history", authenticateToken, async (req, res) => {
   const { hnNumber } = req.params;
   const limit = parseInt(req.query.limit) || 3;
@@ -1758,6 +1758,46 @@ router.get("/:hnNumber/vitals/history", authenticateToken, async (req, res) => {
     });
   }
 });
+
+// fetch patients all vitals history with pagination
+router.get("/:hnNumber/vitals/history/all", authenticateToken, async (req, res) => {
+  const { hnNumber } = req.params;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const offset = (page - 1) * limit;
+
+  try {
+    const totalRecordsResult = await pool.query(
+      "SELECT COUNT(*) AS total FROM patient_vitals WHERE hn_number = $1",
+      [hnNumber]
+    );
+    const totalRecords = parseInt(totalRecordsResult.rows[0].total);
+
+    const history = await pool.query(
+      `SELECT id, weight, systolic, diastolic, created_at
+       FROM patient_vitals
+       WHERE hn_number = $1
+       ORDER BY created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [hnNumber, limit, offset]
+    );
+
+    return res.status(200).json({
+      status: "success",
+      page,
+      limit,
+      total_records: totalRecords,
+      history: history.rows,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({
+      status: "failed",
+      message: "Server error while fetching all vitals history.",
+    });
+  }
+});
+
 
 
 module.exports = router;
