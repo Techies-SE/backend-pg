@@ -1760,44 +1760,86 @@ router.get("/:hnNumber/vitals/history", authenticateToken, async (req, res) => {
 });
 
 // fetch patients all vitals history with pagination
-router.get("/:hnNumber/vitals/history/all", authenticateToken, async (req, res) => {
-  const { hnNumber } = req.params;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const offset = (page - 1) * limit;
+router.get(
+  "/:hnNumber/vitals/history/all",
+  authenticateToken,
+  async (req, res) => {
+    const { hnNumber } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
 
-  try {
-    const totalRecordsResult = await pool.query(
-      "SELECT COUNT(*) AS total FROM patient_vitals WHERE hn_number = $1",
-      [hnNumber]
-    );
-    const totalRecords = parseInt(totalRecordsResult.rows[0].total);
+    try {
+      const totalRecordsResult = await pool.query(
+        "SELECT COUNT(*) AS total FROM patient_vitals WHERE hn_number = $1",
+        [hnNumber]
+      );
+      const totalRecords = parseInt(totalRecordsResult.rows[0].total);
 
-    const history = await pool.query(
-      `SELECT id, weight, systolic, diastolic, created_at
+      const history = await pool.query(
+        `SELECT id, weight, systolic, diastolic, created_at
        FROM patient_vitals
        WHERE hn_number = $1
        ORDER BY created_at DESC
        LIMIT $2 OFFSET $3`,
-      [hnNumber, limit, offset]
+        [hnNumber, limit, offset]
+      );
+
+      return res.status(200).json({
+        status: "success",
+        page,
+        limit,
+        total_records: totalRecords,
+        history: history.rows,
+      });
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({
+        status: "failed",
+        message: "Server error while fetching all vitals history.",
+      });
+    }
+  }
+);
+
+// fetch patients vital data for trends/charts
+router.get("/:hnNumber/vitals/trends", async (req, res) => {
+  const { hnNumber } = req.params;
+  const { range } = req.query;
+
+  // convert range string to days
+  const rangeMap = {
+    "1W": 7,
+    "1M": 30,
+    "6M": 180,
+    "1Y": 365,
+  };
+  const days = rangeMap[range] || 30; // default to 1 month
+
+  try {
+    const trendData = await pool.query(
+      `SELECT weight, systolic, diastolic, created_at
+       FROM patient_vitals
+       WHERE hn_number = $1
+       AND created_at >= NOW() - INTERVAL '${days} days'
+       ORDER BY created_at ASC`,
+      [hnNumber]
     );
 
     return res.status(200).json({
       status: "success",
-      page,
-      limit,
-      total_records: totalRecords,
-      history: history.rows,
+      patient_hn: hnNumber,
+      range: range || "1M",
+      total_points: trendData.rows.length,
+      data_points: trendData.rows,
     });
   } catch (e) {
     console.error(e);
     return res.status(500).json({
       status: "failed",
-      message: "Server error while fetching all vitals history.",
+      message: "Server error while fetching vitals trend data.",
     });
   }
 });
-
-
 
 module.exports = router;
