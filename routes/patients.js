@@ -1844,7 +1844,7 @@ router.get("/:hnNumber/vitals/trends", authenticateToken, async (req, res) => {
 
 // ------------------ Patients Lab Items ------------------
 // fetch historical lab-item-data for trends/charts
-router.get("/:hnNumber/lab-items/:labItemId/trends", async (req, res) => {
+router.get("/:hnNumber/lab-items/:labItemId/trends", authenticateToken, async (req, res) => {
   const { hnNumber, labItemId } = req.params;
   const { range = "1M" } = req.query;
 
@@ -1907,7 +1907,7 @@ router.get("/:hnNumber/lab-items/:labItemId/trends", async (req, res) => {
 });
 
 // fetch historical data list for each lab item
-router.get("/:hnNumber/lab-items/:labItemId/history", async (req, res) => {
+router.get("/:hnNumber/lab-items/:labItemId/history", authenticateToken, async (req, res) => {
   const { hnNumber, labItemId } = req.params;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
