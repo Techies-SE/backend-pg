@@ -1613,4 +1613,77 @@ router.get("/details/:hnNumber", async (req, res) => {
   }
 });
 
+// ------------------ Patients Vitals ------------------
+// patient submit weight, systolic, diastolic
+router.post("/:hnNumber/vitals", async (req, res) => {
+  const { hnNumber } = req.params;
+  const { weight, systolic, diastolic } = req.body;
+  try {
+    try {
+      // 1️⃣ Validate input
+      if (!weight || !systolic || !diastolic) {
+        return res.status(400).json({
+          status: "failed",
+          message: "Missing required fields: weight, systolic, or diastolic.",
+        });
+      }
+
+      // 2️⃣ Check if patient exists
+      const patientResult = await pool.query(
+        "SELECT * FROM patients WHERE hn_number = $1",
+        [hnNumber]
+      );
+
+      if (patientResult.rows.length === 0) {
+        return res.status(404).json({
+          status: "failed",
+          message: "Patient not found.",
+        });
+      }
+
+      const patient = patientResult.rows[0];
+      const height = patient.height; // assuming height is stored in cm
+
+      // 3️⃣ Update weight in patients table and recalculate BMI
+      const heightInMeters = height / 100;
+      const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(2);
+
+      await pool.query(
+        `UPDATE patient_data 
+       SET weight = $1, bmi = $2
+       WHERE hn_number = $3`,
+        [weight, bmi, hnNumber]
+      );
+
+      // 4️⃣ Insert into patient_vitals table
+      const insertResult = await pool.query(
+        `INSERT INTO patient_vitals (hn_number, weight, systolic, diastolic, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       RETURNING *`,
+        [hnNumber, weight, systolic, diastolic]
+      );
+
+      // 5️⃣ Send response
+      return res.status(201).json({
+        status: "success",
+        message: "Vitals submitted successfully.",
+        data: {
+          patient: {
+            hn_number: hnNumber,
+            updated_weight: weight,
+            new_bmi: bmi,
+          },
+          vitals_record: insertResult.rows[0],
+        },
+      });
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({
+        status: "failed",
+        message: "Server error while submitting vitals.",
+      });
+    }
+  } catch (e) {}
+});
+
 module.exports = router;
