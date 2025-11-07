@@ -1629,17 +1629,6 @@ router.post("/:hnNumber/vitals", async (req, res) => {
       }
 
       // 2️⃣ Check if patient exists
-      // const patientResult = await pool.query(
-      //   "SELECT * FROM patients WHERE hn_number = $1",
-      //   [hnNumber]
-      // );
-      // const patientResult = await pool.query(
-      //   `SELECT p.*, pd.height, pd.weight, pd.bmi
-      //     FROM patients p
-      //     LEFT JOIN patient_data pd ON p.hn_number = pd.hn_number
-      //     WHERE p.hn_number = $1`,
-      //   [hnNumber]
-      // );
       const patientResult = await pool.query(
         "SELECT * FROM patient_data WHERE hn_number = $1",
         [hnNumber]
@@ -1656,10 +1645,6 @@ router.post("/:hnNumber/vitals", async (req, res) => {
 
       const patient = patientResult.rows[0];
       const height = patient.height;
-
-      console.log("Patient object:", patient);
-      console.log("Height value:", height, "Type:", typeof height);
-      console.log("Weight value:", weight, "Type:", typeof weight);
 
       // Validate height
       if (!height || height <= 0) {
@@ -1709,6 +1694,40 @@ router.post("/:hnNumber/vitals", async (req, res) => {
       });
     }
   } catch (e) {}
+});
+
+// fetch patients latest vitals
+router.get("/:hnNumber/vitals/latest", authenticateToken, async (req, res) => {
+  const { hnNumber } = req.params;
+
+  try {
+    const latestVitals = await pool.query(
+      `SELECT id, weight, systolic, diastolic, created_at 
+       FROM patient_vitals 
+       WHERE hn_number = $1 
+       ORDER BY created_at DESC 
+       LIMIT 1`,
+      [hnNumber]
+    );
+
+    if (latestVitals.rows.length === 0) {
+      return res.status(404).json({
+        status: "failed",
+        message: "No vitals found for this patient.",
+      });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      latest_vitals: latestVitals.rows[0],
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({
+      status: "failed",
+      message: "Server error while fetching latest vitals.",
+    });
+  }
 });
 
 module.exports = router;
