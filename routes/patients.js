@@ -349,6 +349,7 @@ router.get(
             'lab_items', (
               SELECT JSON_AGG(
                 JSON_BUILD_OBJECT(
+                  'id', li.id
                   'lab_item_name', li.lab_item_name,
                   'lab_item_value', lr.lab_item_value,
                   'lab_item_status', lr.lab_item_status,
