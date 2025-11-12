@@ -152,7 +152,7 @@ const generateAndSaveRecommendationByDate = async function (
       `
       INSERT INTO recommendations 
         (generated_recommendation, status, hn_number, doctor_id, lab_test_date)
-      VALUES ($1, 'pending', $2, $3, $4)
+      VALUES ($1, 'pending', $2, $3, $4::date)
       RETURNING id
       `,
       [generatedRecommendation, hn_number, doctor_id, testDate]
@@ -443,7 +443,7 @@ router.post(
         for (const [lab_test_master_id, lab_items] of lab_tests) {
           const labTestRes = await client.query(
             `INSERT INTO lab_tests (patient_id, lab_test_master_id, lab_test_date, uploaded_by, doctor_id, hn_number)
-             VALUES ($1, $2, $3, $4, $5, $6)
+             VALUES ($1, $2, $3::date, $4, $5, $6)
              RETURNING id`,
             [
               patient_id,
