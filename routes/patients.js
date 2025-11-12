@@ -1920,7 +1920,8 @@ router.get("/:hnNumber/lab-items/:labItemId/history", authenticateToken, async (
         li.lab_item_name,
         li.unit,
         CAST(lt.lab_test_date AS DATE) AS date,
-        lr.lab_item_value
+        lr.lab_item_value,
+        lr.lab_item_status
         FROM lab_results lr
         JOIN lab_tests lt ON lr.lab_test_id = lt.id
         JOIN lab_items li ON lr.lab_item_id = li.id
@@ -1947,6 +1948,7 @@ router.get("/:hnNumber/lab-items/:labItemId/history", authenticateToken, async (
       date: r.date,
       value: parseFloat(r.lab_item_value),
       unit: r.unit,
+      status: r.lab_item_status
     }));
 
     res.json({
