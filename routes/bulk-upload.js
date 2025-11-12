@@ -152,7 +152,7 @@ const generateAndSaveRecommendationByDate = async function (
       `
       INSERT INTO recommendations 
         (generated_recommendation, status, hn_number, doctor_id, lab_test_date)
-      VALUES ($1, 'pending', $2, $3, $4::date)
+      VALUES ($1, 'pending', $2, $3, TO_DATE($4, 'YYYY-MM-DD'))
       RETURNING id
       `,
       [generatedRecommendation, hn_number, doctor_id, testDate]
@@ -258,8 +258,18 @@ router.post(
     };
 
     const normalizeDate = (input) => {
-      const parsed = dayjs(input, "YYYY-MM-DD", true); // strict parse
-      if (!parsed.isValid()) throw new Error(`Invalid date format: ${input}`);
+      // Try parsing as D/MM/YY or DD/MM/YY format first
+      let parsed = dayjs(input, ["D/MM/YY", "DD/MM/YY"], true);
+
+      // If that fails, try YYYY-MM-DD format
+      if (!parsed.isValid()) {
+        parsed = dayjs(input, "YYYY-MM-DD", true);
+      }
+
+      if (!parsed.isValid()) {
+        throw new Error(`Invalid date format: ${input}`);
+      }
+
       return parsed.format("YYYY-MM-DD"); // always normalized to YYYY-MM-DD
     };
 
@@ -272,7 +282,6 @@ router.post(
       client = await pool.connect();
       await client.query("BEGIN");
       await client.query(`SET datestyle TO ISO, YMD;`);
-
 
       // --- 1️⃣ Parse CSV file ---
       await new Promise((resolve, reject) => {
@@ -443,7 +452,7 @@ router.post(
         for (const [lab_test_master_id, lab_items] of lab_tests) {
           const labTestRes = await client.query(
             `INSERT INTO lab_tests (patient_id, lab_test_master_id, lab_test_date, uploaded_by, doctor_id, hn_number)
-             VALUES ($1, $2, $3::date, $4, $5, $6)
+             VALUES ($1, $2, TO_DATE($3, 'YYYY-MM-DD'), $4, $5, $6)
              RETURNING id`,
             [
               patient_id,
