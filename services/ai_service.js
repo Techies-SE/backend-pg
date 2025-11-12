@@ -4,14 +4,6 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs");
 const path = require("path");
 
-//softmax
-// function softmax(arr) {
-//   const max = Math.max(...arr);
-//   const exps = arr.map((x) => Math.exp(x - max));
-//   const sum = exps.reduce((a, b) => a + b, 0);
-//   return exps.map((e) => e / sum);
-// }
-
 function softmax(arr, temperature = 1.5) {
   const max = Math.max(...arr);
   const exps = arr.map((x) => Math.exp((x - max) / temperature));
@@ -32,17 +24,6 @@ for (const file of fs.readdirSync(modelsDir)) {
   }
 }
 
-// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// async function generateRecommendation(prompt) {
-//   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-//   const result = await model.generateContent(prompt);
-//   const response = await result.response;
-//   return response.text(); // This is your human-like AI recommendation
-
-// }
-
 function predictLabs(input) {
   const results = {};
   const recommendations = [];
@@ -51,7 +32,6 @@ function predictLabs(input) {
     if (hasAll) {
       const prediction = predict(artifact, input);
       results[testName] = prediction;
-      // recommendations.push(prediction);
       const formatted = 
         prediction.prediction;
       recommendations.push(formatted);
@@ -60,17 +40,7 @@ function predictLabs(input) {
   if (Object.keys(results).length === 0) {
     throw new Error("No matching lab test found for the given input.");
   }
-  // return {
-  //   details: results,
-  //   combined: recommendations.join(""),
-  // };
-
-  //paragraph view
-  // return recommendations.join("");
-
-  //list view
   const bulletList = recommendations.map((r) => `• ${r}`).join("\n");
-  //return bulletList;
   return {
     bulletList,
    detailedResults: results,
@@ -99,8 +69,7 @@ function predict(artifact, inputFeatures) {
   const probs = softmax(scores);
 
   const bestIdx = probs.indexOf(Math.max(...probs));
-  //old
-  // return artifact.classes[bestIdx];
+
 
   console.log("Scores:", scores);
   console.log("Probabilities:", probs);
