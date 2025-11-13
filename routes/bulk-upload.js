@@ -273,7 +273,6 @@ router.post(
       await client.query("BEGIN");
       await client.query(`SET datestyle TO ISO, YMD;`);
 
-
       // --- 1️⃣ Parse CSV file ---
       await new Promise((resolve, reject) => {
         fs.createReadStream(req.file.path)
@@ -354,43 +353,47 @@ router.post(
           );
 
           // 🆕 Get the patient's gender
-          const patientData = await client.query(
-            "SELECT gender FROM patient_data WHERE hn_number = $1",
-            [hn_number]
-          );
-          const patientGender = patientData.rows[0]?.gender;
+          // const patientData = await client.query(
+          //   "SELECT gender FROM patient_data WHERE hn_number = $1",
+          //   [hn_number]
+          // );
+          // const patientGender = patientData.rows[0]?.gender;
 
-          // 🆕 Check if this test requires Gender
-          const genderItemRes = await client.query(
-            `SELECT li.id as lab_item_id
-            FROM lab_items li
-            JOIN lab_test_items lti ON li.id = lti.lab_item_id
-            WHERE li.lab_item_name = 'Gender' AND lti.lab_test_master_id = $1`,
-            [lab_test_master_id]
-          );
+          // // 🆕 Check if this test requires Gender
+          // const genderItemRes = await client.query(
+          //   `SELECT li.id as lab_item_id
+          //   FROM lab_items li
+          //   JOIN lab_test_items lti ON li.id = lti.lab_item_id
+          //   WHERE li.lab_item_name = 'Gender' AND lti.lab_test_master_id = $1`,
+          //   [lab_test_master_id]
+          // );
 
-          if (genderItemRes.rowCount > 0) {
-            const genderLabItemId = genderItemRes.rows[0].lab_item_id;
-            const genderValue = patientGender === "male" ? 0 : 1;
+          // if (genderItemRes.rowCount > 0) {
+          //   const genderLabItemId = genderItemRes.rows[0].lab_item_id;
+          //   const genderValue = patientGender === "male" ? 0 : 1;
 
-            // Check if already added (avoid duplication)
-            const alreadyHasGender = lab_items.some(
-              (item) => item.lab_item_id === genderLabItemId
-            );
-            if (!alreadyHasGender) {
-              lab_items.push({
-                lab_item_id: genderLabItemId,
-                lab_item_value: genderValue,
-              });
-            }
-          }
+          //   // Check if already added (avoid duplication)
+          //   const alreadyHasGender = lab_items.some(
+          //     (item) => item.lab_item_id === genderLabItemId
+          //   );
+          //   if (!alreadyHasGender) {
+          //     lab_items.push({
+          //       lab_item_id: genderLabItemId,
+          //       lab_item_value: genderValue,
+          //     });
+          //   }
+          // }
 
           const requiredItemIds = requiredItemsRes.rows.map((r) => r.id);
           const providedItemIds = lab_items.map((i) => i.lab_item_id);
 
           // Find missing required items
+          // const missingItems = requiredItemsRes.rows.filter(
+          //   (r) => !providedItemIds.includes(r.id)
+          // );
           const missingItems = requiredItemsRes.rows.filter(
-            (r) => !providedItemIds.includes(r.id)
+            (r) =>
+              !providedItemIds.includes(r.id) && r.lab_item_name !== "Gender"
           );
 
           if (missingItems.length > 0) {
