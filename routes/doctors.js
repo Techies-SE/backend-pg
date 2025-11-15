@@ -169,11 +169,7 @@ router.get("/patients-lab-tests", authenticateToken, async (req, res) => {
         lt.lab_test_date AS test_date,
 
         -- Recommendation Columns
-        r.id AS recommendation_id,
-        r.generated_recommendation,
-        r.doctor_recommendation,
         r.status AS recommendation_status,
-        r.lab_test_date AS recommendation_date
 
       FROM patients p
       JOIN lab_tests lt 
