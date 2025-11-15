@@ -169,7 +169,7 @@ router.get("/patients-lab-tests", authenticateToken, async (req, res) => {
         lt.lab_test_date AS test_date,
 
         -- Recommendation Columns
-        r.status AS recommendation_status,
+        r.status AS recommendation_status
 
       FROM patients p
       JOIN lab_tests lt 
