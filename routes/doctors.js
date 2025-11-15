@@ -141,22 +141,55 @@ router.get("/profile", authenticateToken, async (req, res) => {
 router.get("/patients-lab-tests", authenticateToken, async (req, res) => {
   const doctorId = req.user.id;
   try {
+    // const { rows } = await pool.query(
+    //   `
+    //   SELECT DISTINCT ON (p.hn_number, lt.lab_test_date::date)
+    //   p.id AS patient_id,
+    //   p.hn_number,
+    //   p.name AS patient_name,
+    //   lt.id AS lab_test_id,
+    //   lt.doctor_id AS doctor_id,
+    //   lt.lab_test_date AS test_date
+    //   FROM patients p
+    //   JOIN lab_tests lt ON lt.patient_id = p.id
+    //   WHERE lt.doctor_id = $1
+    //   ORDER BY p.hn_number, lt.lab_test_date::date DESC, lt.id DESC;
+
+    //   `,
+    //   [doctorId]
+    // );
     const { rows } = await pool.query(
       `
       SELECT DISTINCT ON (p.hn_number, lt.lab_test_date::date)
-      p.id AS patient_id,
-      p.hn_number,
-      p.name AS patient_name,
-      lt.id AS lab_test_id,
-      lt.doctor_id AS doctor_id,
-      lt.lab_test_date AS test_date
+        p.id AS patient_id,
+        p.hn_number,
+        p.name AS patient_name,
+        lt.id AS lab_test_id,
+        lt.doctor_id,
+        lt.lab_test_date AS test_date,
+
+        -- Recommendation Columns
+        r.id AS recommendation_id,
+        r.generated_recommendation,
+        r.doctor_recommendation,
+        r.status AS recommendation_status,
+        r.lab_test_date AS recommendation_date
+
       FROM patients p
-      JOIN lab_tests lt ON lt.patient_id = p.id
+      JOIN lab_tests lt 
+        ON lt.patient_id = p.id
+
+      LEFT JOIN recommendations r
+        ON r.hn_number = p.hn_number
+        AND r.lab_test_date = lt.lab_test_date::date
+        AND r.doctor_id = lt.doctor_id
+
       WHERE lt.doctor_id = $1
-      ORDER BY p.hn_number, lt.lab_test_date::date DESC, lt.id DESC;
 
-
-
+      ORDER BY 
+        p.hn_number,
+        lt.lab_test_date::date DESC,
+        lt.id DESC;
       `,
       [doctorId]
     );
