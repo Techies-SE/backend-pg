@@ -32,8 +32,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
-// app.use(express.json());
+app.use(cors({
+  origin: "https://doctor-blush-kappa.vercel.app",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true // if you need cookies
+}));// app.use(express.json());
 // app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
